@@ -1,6 +1,18 @@
 ; @petrel 2021/3/28 21:50
 ; @petrel 2021/3/30 19:25
+;	Disable get_cursor, print_string
+;	Add edit_video_memory to print string
+; @petrel 2021/3/31 15:12
+;	Add function rd_disk_m_16
+;----------------------------------------------------------------------------------
 ; Simple MBR
+; TO-DO LIST
+; 1. Change rd_disk_m_16 to avoid the alternation of esi and di (UNDONE) 
+;-----------------------------------------------------------------------------------
+; Include some constants
+
+%include "boot.inc" 
+
 ;-----------------------------------------------------------------------------------
 SECTION MBR vstart=0x7c00
 	mov ax, cs 
@@ -13,6 +25,7 @@ SECTION MBR vstart=0x7c00
 ;Set the base address of video memory : 0xb800
 	mov ax, 0xb800
 	mov gs, ax
+
 ;------------------------------------------------------------------------------------
 ; Clear the screen
 ; Int 0x10 
@@ -29,6 +42,7 @@ SECTION MBR vstart=0x7c00
 	mov dx, 0x184f
 
 	int 0x10
+
 ;------------------------------------------------------------------------------------
 ; Get the cursor
 ; Int 0x10
@@ -39,7 +53,7 @@ SECTION MBR vstart=0x7c00
 ;	
 ;	int 0x10
 ;------------------------------------------------------------------------------------
-; Print the string
+; Print string
 ; Int 0x10 
 ; NOT USED
 ;------------------
@@ -57,20 +71,108 @@ SECTION MBR vstart=0x7c00
 	mov byte [gs : 0x00], '1'
 	mov byte [gs : 0x01], 0xA4
 
-	mov byte [gs : 0x02], 'T'
+	mov byte [gs : 0x02], ' '
 	mov byte [gs : 0x03], 0xA4
 
-	mov byte [gs : 0x04], 'e'
+	mov byte [gs : 0x04], 'M'
 	mov byte [gs : 0x05], 0xA4
 
-	mov byte [gs : 0x06], 's'
+	mov byte [gs : 0x06], 'B'
 	mov byte [gs : 0x07], 0xA4
 
-	mov byte [gs : 0x08], 'T'	
+	mov byte [gs : 0x08], 'R'	
 	mov byte [gs : 0x09], 0xA4
+
 ;-------------------------------------------------------------------------------------
-	jmp $
+; Load kernel loader into memory
+;-------------------------------------------------------------------
+	mov eax, LOADER_START_SECTOR ; LAB addr of kernel loader	
+	mov bx, LOADER_BASE_ADDR ; base addr in memory of kernel loader
+	mov cx, 1 ; num of sector to read
+
+;	xor esi, esi ; rd_disk_m_16 will change
+;	xor di, di   ; the value of esi and di
+	call rd_disk_m_16
+
+; Get into kernel loader
+	jmp LOADER_BASE_ADDR
+ 
+;--------------------------------------------------------------------------------------
+; function : read n sector from disk
+rd_disk_m_16:
+;--------------------------------------------------------------------------------------
+; para : eax : LBA sector number
+;		 bx : addr to save the content
+;        cx : num of sector to read
+; return : no
+; note : the function wil change esi and di
+
+; Back up eax and cx
+	mov esi, eax
+;	xor ch, ch
+	mov di, cx
 	
-;	message db "1 MBR"
+; Set the num of sector to read
+	mov dx, 0x1f2 ; 0x1f2 port to primary channel - sector count
+	mov al, cl
+	out dx, al
+
+; Recover eax 
+	mov eax, esi
+
+; Set the LBA addr into port 0x1f3~0x1f6
+	; 7~0 LBA addr into port 0x1f3
+	mov dx, 0x1f3
+	out dx, al
+
+	; 15~8 LBA addr into port 0x1f4
+	mov dx, 0x1f4
+	mov cl, 8
+	shr eax, cl
+	out dx, al
+
+	; 23~16 LBA addr into port 0x1f5
+	mov dx, 0x1f5
+	shr eax, cl
+	out dx, al
+
+	; 27~24 LBA addr into port 0x1f6
+	mov dx, 0x1f6
+	shr eax, cl
+	and al, 0x0f
+	or al, 0xe0 ; 1110 set lba mode and master disk
+	out dx, al	
+
+; Write read command 0x20 into port 0x1f7 
+	mov dx, 0x1f7
+	mov al, 0x20
+	out dx, al
+
+; Check disk status from port 0x1f7
+.not_ready:
+	nop 
+	in al, dx	
+	and al, 0x88 ; 3 bit = 1 means data transport ready
+				 ; 7 bit = 1 means disk busy
+	cmp al, 0x08
+	jnz .not_ready
+
+; Read data from port 0x1f0
+	; calculate times need to read from disk
+	; di * 512 / (1 word per times) 
+	mov ax, di
+	mov dx, 256
+	mul dx
+	mov cx, ax
+
+	mov dx, 0x1f0
+.go_on_read:
+	in ax, dx
+	mov [bx], ax
+	add bx, 2
+	loop .go_on_read
+	ret
+
+;--------------------------------------------------------------------------------------
 	times 510-($-$$) db 0
 	db 0x55, 0xaa
