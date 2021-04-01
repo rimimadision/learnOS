@@ -4,10 +4,12 @@
 ;	Add edit_video_memory to print string
 ; @petrel 2021/3/31 15:12
 ;	Add function rd_disk_m_16
+; @petrel 2021/4/1 10:08
+; 	Complete todolist 1
 ;----------------------------------------------------------------------------------
 ; Simple MBR
 ; TO-DO LIST
-; 1. Change rd_disk_m_16 to avoid the alternation of esi and di (UNDONE) 
+; 1. Change rd_disk_m_16 to avoid the alternation of esi and di (DONE) 
 ;-----------------------------------------------------------------------------------
 ; Include some constants
 
@@ -90,8 +92,6 @@ SECTION MBR vstart=0x7c00
 	mov bx, LOADER_BASE_ADDR ; base addr in memory of kernel loader
 	mov cx, 1 ; num of sector to read
 
-;	xor esi, esi ; rd_disk_m_16 will change
-;	xor di, di   ; the value of esi and di
 	call rd_disk_m_16
 
 ; Get into kernel loader
@@ -105,11 +105,20 @@ rd_disk_m_16:
 ;		 bx : addr to save the content
 ;        cx : num of sector to read
 ; return : no
-; note : the function wil change esi and di
+
+; Save esi, di and dx 
+	push di
+	push si
+	push dx
+
+	push cx
+	mov cl, 16
+	shr esi, cl
+	pop cx
+	push si
 
 ; Back up eax and cx
 	mov esi, eax
-;	xor ch, ch
 	mov di, cx
 	
 ; Set the num of sector to read
@@ -171,6 +180,15 @@ rd_disk_m_16:
 	mov [bx], ax
 	add bx, 2
 	loop .go_on_read
+
+; Recover esi, di and dx
+	pop si
+	mov cl, 16
+	shl	esi, cl
+	pop dx
+	pop si
+	pop di
+
 	ret
 
 ;--------------------------------------------------------------------------------------
