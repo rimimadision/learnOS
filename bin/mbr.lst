@@ -112,89 +112,89 @@
    108                                  
    109                                  ; Save esi, di and dx 
    110 0000006E 57                      	push di
-   111 0000006F 56                      	push si
-   112 00000070 52                      	push dx
+   111                                  ;	push si
+   112 0000006F 52                      	push dx
    113                                  
-   114 00000071 51                      	push cx
-   115 00000072 B110                    	mov cl, 16
-   116 00000074 66D3EE                  	shr esi, cl
-   117 00000077 56                      	push si
-   118 00000078 59                      	pop cx
+   114                                  ;	push cx
+   115                                  ;	mov cl, 16
+   116                                  ;	shr esi, cl
+   117                                  ;	pop cx
+   118 00000070 6656                    	push esi
    119                                  
    120                                  ; Back up eax and cx
-   121 00000079 6689C6                  	mov esi, eax
-   122 0000007C 89CF                    	mov di, cx
+   121 00000072 6689C6                  	mov esi, eax
+   122 00000075 89CF                    	mov di, cx
    123                                  	
    124                                  ; Set the num of sector to read
-   125 0000007E BAF201                  	mov dx, 0x1f2 ; 0x1f2 port to primary channel - sector count
-   126 00000081 88C8                    	mov al, cl
-   127 00000083 EE                      	out dx, al
+   125 00000077 BAF201                  	mov dx, 0x1f2 ; 0x1f2 port to primary channel - sector count
+   126 0000007A 88C8                    	mov al, cl
+   127 0000007C EE                      	out dx, al
    128                                  
    129                                  ; Recover eax 
-   130 00000084 6689F0                  	mov eax, esi
+   130 0000007D 6689F0                  	mov eax, esi
    131                                  
    132                                  ; Set the LBA addr into port 0x1f3~0x1f6
    133                                  	; 7~0 LBA addr into port 0x1f3
-   134 00000087 BAF301                  	mov dx, 0x1f3
-   135 0000008A EE                      	out dx, al
+   134 00000080 BAF301                  	mov dx, 0x1f3
+   135 00000083 EE                      	out dx, al
    136                                  
    137                                  	; 15~8 LBA addr into port 0x1f4
-   138 0000008B BAF401                  	mov dx, 0x1f4
-   139 0000008E B108                    	mov cl, 8
-   140 00000090 66D3E8                  	shr eax, cl
-   141 00000093 EE                      	out dx, al
+   138 00000084 BAF401                  	mov dx, 0x1f4
+   139 00000087 B108                    	mov cl, 8
+   140 00000089 66D3E8                  	shr eax, cl
+   141 0000008C EE                      	out dx, al
    142                                  
    143                                  	; 23~16 LBA addr into port 0x1f5
-   144 00000094 BAF501                  	mov dx, 0x1f5
-   145 00000097 66D3E8                  	shr eax, cl
-   146 0000009A EE                      	out dx, al
+   144 0000008D BAF501                  	mov dx, 0x1f5
+   145 00000090 66D3E8                  	shr eax, cl
+   146 00000093 EE                      	out dx, al
    147                                  
    148                                  	; 27~24 LBA addr into port 0x1f6
-   149 0000009B BAF601                  	mov dx, 0x1f6
-   150 0000009E 66D3E8                  	shr eax, cl
-   151 000000A1 240F                    	and al, 0x0f
-   152 000000A3 0CE0                    	or al, 0xe0 ; 1110 set lba mode and master disk
-   153 000000A5 EE                      	out dx, al	
+   149 00000094 BAF601                  	mov dx, 0x1f6
+   150 00000097 66D3E8                  	shr eax, cl
+   151 0000009A 240F                    	and al, 0x0f
+   152 0000009C 0CE0                    	or al, 0xe0 ; 1110 set lba mode and master disk
+   153 0000009E EE                      	out dx, al	
    154                                  
    155                                  ; Write read command 0x20 into port 0x1f7 
-   156 000000A6 BAF701                  	mov dx, 0x1f7
-   157 000000A9 B020                    	mov al, 0x20
-   158 000000AB EE                      	out dx, al
+   156 0000009F BAF701                  	mov dx, 0x1f7
+   157 000000A2 B020                    	mov al, 0x20
+   158 000000A4 EE                      	out dx, al
    159                                  
    160                                  ; Check disk status from port 0x1f7
    161                                  .not_ready:
-   162 000000AC 90                      	nop 
-   163 000000AD EC                      	in al, dx	
-   164 000000AE 2488                    	and al, 0x88 ; 3 bit = 1 means data transport ready
+   162 000000A5 90                      	nop 
+   163 000000A6 EC                      	in al, dx	
+   164 000000A7 2488                    	and al, 0x88 ; 3 bit = 1 means data transport ready
    165                                  				 ; 7 bit = 1 means disk busy
-   166 000000B0 3C08                    	cmp al, 0x08
-   167 000000B2 75F8                    	jnz .not_ready
+   166 000000A9 3C08                    	cmp al, 0x08
+   167 000000AB 75F8                    	jnz .not_ready
    168                                  
    169                                  ; Read data from port 0x1f0
    170                                  	; calculate times need to read from disk
    171                                  	; di * 512 / (1 word per times) 
-   172 000000B4 89F8                    	mov ax, di
-   173 000000B6 BA0001                  	mov dx, 256
-   174 000000B9 F7E2                    	mul dx
-   175 000000BB 89C1                    	mov cx, ax
+   172 000000AD 89F8                    	mov ax, di
+   173 000000AF BA0001                  	mov dx, 256
+   174 000000B2 F7E2                    	mul dx
+   175 000000B4 89C1                    	mov cx, ax
    176                                  
-   177 000000BD BAF001                  	mov dx, 0x1f0
+   177 000000B6 BAF001                  	mov dx, 0x1f0
    178                                  .go_on_read:
-   179 000000C0 ED                      	in ax, dx
-   180 000000C1 8907                    	mov [bx], ax
-   181 000000C3 83C302                  	add bx, 2
-   182 000000C6 E2F8                    	loop .go_on_read
+   179 000000B9 ED                      	in ax, dx
+   180 000000BA 8907                    	mov [bx], ax
+   181 000000BC 83C302                  	add bx, 2
+   182 000000BF E2F8                    	loop .go_on_read
    183                                  
    184                                  ; Recover esi, di and dx
-   185 000000C8 5E                      	pop si
-   186 000000C9 B110                    	mov cl, 16
-   187 000000CB 66D3E6                  	shl	esi, cl
-   188 000000CE 5A                      	pop dx
-   189 000000CF 5E                      	pop si
-   190 000000D0 5F                      	pop di
+   185 000000C1 665E                    	pop esi
+   186                                  ;	mov cl, 16
+   187                                  ;	shl	esi, cl
+   188 000000C3 5A                      	pop dx
+   189                                  ;	pop si
+   190 000000C4 5F                      	pop di
    191                                  
-   192 000000D1 C3                      	ret
+   192 000000C5 C3                      	ret
    193                                  
    194                                  ;--------------------------------------------------------------------------------------
-   195 000000D2 00<rept>                	times 510-($-$$) db 0
+   195 000000C6 00<rept>                	times 510-($-$$) db 0
    196 000001FE 55AA                    	db 0x55, 0xaa

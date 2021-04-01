@@ -108,14 +108,14 @@ rd_disk_m_16:
 
 ; Save esi, di and dx 
 	push di
-	push si
+;	push si
 	push dx
 
-	push cx
-	mov cl, 16
-	shr esi, cl
-	pop cx
-	push si
+;	push cx
+;	mov cl, 16
+;	shr esi, cl
+;	pop cx
+	push esi
 
 ; Back up eax and cx
 	mov esi, eax
@@ -182,11 +182,11 @@ rd_disk_m_16:
 	loop .go_on_read
 
 ; Recover esi, di and dx
-	pop si
-	mov cl, 16
-	shl	esi, cl
+	pop esi
+;	mov cl, 16
+;	shl	esi, cl
 	pop dx
-	pop si
+;	pop si
 	pop di
 
 	ret
