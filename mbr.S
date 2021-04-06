@@ -90,7 +90,7 @@ SECTION MBR vstart=0x7c00
 ;-------------------------------------------------------------------
 	mov eax, LOADER_START_SECTOR ; LAB addr of kernel loader	
 	mov bx, LOADER_BASE_ADDR ; base addr in memory of kernel loader
-	mov cx, 1 ; num of sector to read
+	mov cx, 4 ; num of sector to read
 
 	call rd_disk_m_16
 
