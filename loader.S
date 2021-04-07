@@ -2,6 +2,8 @@
 ; 	Create the loader file
 ; @petrel 2021/4/6 16:36
 ; 	Get into Protect Mode
+; @petrel 2021/4/7 18:46
+; 	Add detect_mem
 ;-------------------------------------------------------
 ; Kernel Loader
 ;-------------------------------------------------------
@@ -101,8 +103,8 @@ loader_start:
 	xor edx, edx
 
 .find_max_mem_area: 
-	mov eax, [ards_buf]
-	add eax, [ards_buf + 8]
+	mov eax, [ebx]
+	add eax, [ebx + 8]
 	add ebx, 20
 	cmp edx, eax
 	jge .next_ards
@@ -129,7 +131,7 @@ loader_start:
 	int 0x15
 	jc .e801_failed_so_try_88
 
-; get mem lower than 15mb
+; get mem_size lower than 15mb
 	mov cx, 0x400
 	mul cx
 	and eax, 0x0000ffff
@@ -138,7 +140,7 @@ loader_start:
 	add edx, 0x100000; add 1mb for no mem_hole
 	mov esi, edx; back-up mem_low_15mb
 
-; get mem 16mb ~ 4gb
+; get mem_size 16mb ~ 4gb
 	xor eax, eax
 	mov ax, bx
 	mov ecx, 0x10000	 
@@ -157,10 +159,31 @@ loader_start:
 ; ret:  cf	: call success for cf=0
 ;		ax         		 
 ;		mem_size = ax*1kb + 1mb		
-	
 
-
+.e801_failed_so_try_88:	
+	mov ah, 0x88
+	int 0x15
+;undefin for now
+;	jc .error_hlt
 	
+; get mem_size
+	mov cx, 0x400
+	mul cx
+	and eax, 0x0000ffff
+	shl edx, 16
+	or edx, eax
+	add edx, 0x100000
+
+	jmp .mem_get_ok
+;-------------------------------------------------------
+; Finish detecting memory 
+;-------------------------------------------------------
+; para:	edx : mem_size detected
+; ret:  [total_mem_bytes] : record mem_size
+
+.mem_get_ok:
+	mov [total_mem_bytes], edx; edx contain count of mem_size with bytes 
+
 ;-------------------------------------------------------
 ; INT 0X10 function_no 0x13 
 ; Print String
@@ -173,47 +196,51 @@ loader_start:
 ;		es:bp 	: addr of string
 ; 		al=0x01 : display mode(1 -- string only contains chars, attribute in bl and the pos of cursor)
 ; return: no
+	jmp print_msg
+		
+	loadermsg db "mem size confirm!"
 
-;	mov sp, LOADER_BASE_ADDR
-;	mov bp, loadermsg
-;	mov cx, 17
-;	mov ax, 0x1301
-;	mov bx, 0x001f
-;	mov dx, 0x1800
-;	int 0x10
+print_msg:
+	mov sp, LOADER_BASE_ADDR
+	mov bp, loadermsg
+	mov cx, 17
+	mov ax, 0x1301
+	mov bx, 0x001f
+	mov dx, 0x1800
+	int 0x10
 
 ;-------------------------------------------------------
 ; Enter Protect Mode
 ;-------------------------------------------------------
 ; Open A20
-;	in al, 0x92; ?????????????
-;	or al, 0000_0010b
-;	out 0x92, al
+	in al, 0x92; ?????????????
+	or al, 0000_0010b
+	out 0x92, al
 
 ; Load gdt
-;	lgdt [gdt_ptr]
+	lgdt [gdt_ptr]
 
 ; set cr0 0bit
-;	mov eax, cr0
-;	or eax, 0x00000001
-;	mov cr0, eax
+	mov eax, cr0
+	or eax, 0x00000001
+	mov cr0, eax
 
 ; Flush pipeline and serialize processor
-;	jmp dword SELECTOR_CODE:p_mode_start
+	jmp dword SELECTOR_CODE:p_mode_start
 
 ;-------------------------------------------------------
 ; Have entered the p_mode
 ;-------------------------------------------------------
-;[bits 32]
-;p_mode_start: 
-;	mov ax, SELECTOR_DATA
-;	mov ds, ax
-;	mov es, ax
-;	mov ss, ax
-;	mov esp, LOADER_STACK_TOP
-;	mov ax, SELECTOR_VIDEO
-;	mov gs, ax
+[bits 32]
+p_mode_start: 
+	mov ax, SELECTOR_DATA
+	mov ds, ax
+	mov es, ax
+	mov ss, ax
+	mov esp, LOADER_STACK_TOP
+	mov ax, SELECTOR_VIDEO
+	mov gs, ax
 	
-;	mov byte [gs : 160], 'P'
+	mov byte [gs : 160], 'P'
 
-;	jmp $
+	jmp $
