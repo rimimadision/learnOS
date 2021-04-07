@@ -110,36 +110,54 @@ loader_start:
 
 .next_ards:
 	loop .find_max_mem_area
-	jmp .mem_ok
+	jmp .mem_get_ok
 ;-------------------------------------------------------
-; Detect memory 
+; Detect memory (lower than 4gb)
 ; int 0x15h
 ; function code : 0xe801
 ;-------------------------------------------------------
-; para: eax=0x0000e801 : function code
-; 		ebx=0          : initialize ebx 0, ebx will save
-;                        the position of next ards
-; 		edx=0x534d150  : signature certificate, unchange
-; 		es:di          : buff for ards
-; 		ecx=20         : ards size
+; para: ax=0xe801 : function code
 ; ret:  cf			: call success for cf=0
-;		eax=edx		 
-;   	[es:di]		: ards struct
-;		ecx			: count bytes of ards struct
-;		ebx			: next ards
+;		ax          		 
+;   	bx           
+;		cx=ax
+;		dx=bx	
+;		mem_size = (ax*1kb + 1 ) + bx*64kb		
 
+.e820_failed_so_try_e801:
+	mov ax, 0xe801
+	int 0x15
+	jc .e801_failed_so_try_88
+
+; get mem lower than 15mb
+	mov cx, 0x400
+	mul cx
+	and eax, 0x0000ffff
+	shl edx, 16
+	or edx, eax
+	add edx, 0x100000; add 1mb for no mem_hole
+	mov esi, edx; back-up mem_low_15mb
+
+; get mem 16mb ~ 4gb
+	xor eax, eax
+	mov ax, bx
+	mov ecx, 0x10000	 
+	mul ecx
+	mov edx, eax; for mem lower than 4gb
+				; eax with 32bits is sufficient
+	add edx, esi
+	jmp .mem_get_ok
+	
 ;-------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
+; Detect memory (lower than 64mb)
+; int 0x15h
+; function code : 0x88
+;-------------------------------------------------------
+; para: ah=0x88 : function code
+; ret:  cf	: call success for cf=0
+;		ax         		 
+;		mem_size = ax*1kb + 1mb		
+	
 
 
 	
