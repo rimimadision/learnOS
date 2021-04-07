@@ -10,9 +10,10 @@
 
 ;-------------------------------------------------------
 SECTION loader vstart=LOADER_BASE_ADDR
-;-------------------------------------------------------
+
 LOADER_STACK_TOP equ LOADER_BASE_ADDR
-	jmp loader_start
+;	jmp loader_start
+
 ;-------------------------------------------------------
 ; Create GDT 
 ;-------------------------------------------------------
@@ -32,29 +33,121 @@ LOADER_STACK_TOP equ LOADER_BASE_ADDR
 	GDT_LIMIT equ GDT_SIZE - 1
 	
 	; leave space for 60 gdt
-;	times 60 dq 0
+	times 60 dq 0
+
 ;-------------------------------------------------------
 ; SEGMENT SELECTOR
 ;-------------------------------------------------------
 	SELECTOR_CODE equ (0x0001<<3) + TI_GDT + RPL0
 	SELECTOR_DATA equ (0x0002<<3) + TI_GDT + RPL0
 	SELECTOR_VIDEO equ (0x0003<<3) + TI_GDT + RPL0
+
 ;-------------------------------------------------------
 ; Loader Data
 ;-------------------------------------------------------
+	; address of total_mem_bytes -- 0xb00
+	total_mem_bytes dd 0
+
 	gdt_ptr dw GDT_LIMIT
 			dd GDT_BASE
-	loadermsg db '2 loader in real.' 
+	ards_buf times 244 db 0
+	ards_nr dw 0 ; count of ARDS
+	
+;	loadermsg db '2 loader in real.' 
+
 ;-------------------------------------------------------
 ; Loader Code	
 ;-------------------------------------------------------
 loader_start:
+
+;-------------------------------------------------------
+; Detect memory 
+; int 0x15h
+; function code : 0xe820
+;-------------------------------------------------------
+; para: eax=0x0000e820 : function code
+; 		ebx=0          : initialize ebx 0, ebx will save
+;                        the position of next ards
+; 		edx=0x534d150  : signature certificate, unchange
+; 		es:di          : buff for ards
+; 		ecx=20         : ards size
+; ret:  cf			: call success for cf=0
+;		eax=edx		 
+;   	[es:di]		: ards struct
+;		ecx			: count bytes of ards struct
+;		ebx			: next ards
+
+	xor ebx, ebx
+	mov edx, 0x534d4150
+	mov di, ards_buf
+
+.e820_mem_get_loop:
+	mov eax, 0x0000e820
+	mov ecx, 20 	
+	int 0x15
+	jc .e820_failed_so_try_e801
+
+	add di, cx
+	inc word [ards_nr]
+	
+	; if ebx=0 and cf=0, ards all return 
+	cmp ebx, 0
+	jnz .e820_mem_get_loop
+
+; go through to find max ards
+	xor ecx, ecx
+	mov cx, [ards_nr]
+	mov ebx, ards_buf
+	xor edx, edx
+
+.find_max_mem_area: 
+	mov eax, [ards_buf]
+	add eax, [ards_buf + 8]
+	add ebx, 20
+	cmp edx, eax
+	jge .next_ards
+	mov edx, eax
+
+.next_ards:
+	loop .find_max_mem_area
+	jmp .mem_ok
+;-------------------------------------------------------
+; Detect memory 
+; int 0x15h
+; function code : 0xe801
+;-------------------------------------------------------
+; para: eax=0x0000e801 : function code
+; 		ebx=0          : initialize ebx 0, ebx will save
+;                        the position of next ards
+; 		edx=0x534d150  : signature certificate, unchange
+; 		es:di          : buff for ards
+; 		ecx=20         : ards size
+; ret:  cf			: call success for cf=0
+;		eax=edx		 
+;   	[es:di]		: ards struct
+;		ecx			: count bytes of ards struct
+;		ebx			: next ards
+
+;-------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 ;-------------------------------------------------------
 ; INT 0X10 function_no 0x13 
 ; Print String
 ;-------------------------------------------------------
-; para: ah=0x13 : function number
+; para: ah=0x13 : function code
 ;		bh      : page number
 ;		bl      : attribute
 ; 		cx      : length of string
@@ -63,46 +156,46 @@ loader_start:
 ; 		al=0x01 : display mode(1 -- string only contains chars, attribute in bl and the pos of cursor)
 ; return: no
 
-	mov sp, LOADER_BASE_ADDR
-	mov bp, loadermsg
-	mov cx, 17
-	mov ax, 0x1301
-	mov bx, 0x001f
-	mov dx, 0x1800
-	int 0x10
+;	mov sp, LOADER_BASE_ADDR
+;	mov bp, loadermsg
+;	mov cx, 17
+;	mov ax, 0x1301
+;	mov bx, 0x001f
+;	mov dx, 0x1800
+;	int 0x10
 
 ;-------------------------------------------------------
 ; Enter Protect Mode
 ;-------------------------------------------------------
 ; Open A20
-	in al, 0x92; ?????????????
-	or al, 0000_0010b
-	out 0x92, al
+;	in al, 0x92; ?????????????
+;	or al, 0000_0010b
+;	out 0x92, al
 
 ; Load gdt
-	lgdt [gdt_ptr]
+;	lgdt [gdt_ptr]
 
 ; set cr0 0bit
-	mov eax, cr0
-	or eax, 0x00000001
-	mov cr0, eax
+;	mov eax, cr0
+;	or eax, 0x00000001
+;	mov cr0, eax
 
 ; Flush pipeline and serialize processor
-	jmp dword SELECTOR_CODE:p_mode_start
+;	jmp dword SELECTOR_CODE:p_mode_start
 
 ;-------------------------------------------------------
 ; Have entered the p_mode
 ;-------------------------------------------------------
-[bits 32]
-p_mode_start: 
-	mov ax, SELECTOR_DATA
-	mov ds, ax
-	mov es, ax
-	mov ss, ax
-	mov esp, LOADER_STACK_TOP
-	mov ax, SELECTOR_VIDEO
-	mov gs, ax
+;[bits 32]
+;p_mode_start: 
+;	mov ax, SELECTOR_DATA
+;	mov ds, ax
+;	mov es, ax
+;	mov ss, ax
+;	mov esp, LOADER_STACK_TOP
+;	mov ax, SELECTOR_VIDEO
+;	mov gs, ax
 	
-	mov byte [gs : 160], 'P'
+;	mov byte [gs : 160], 'P'
 
-	jmp $
+;	jmp $

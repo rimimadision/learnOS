@@ -1,0 +1,157 @@
+     1                                  ; @petrel 2021/3/31 16:36
+     2                                  ; 	Create the loader file
+     3                                  ; @petrel 2021/4/6 16:36
+     4                                  ; 	Get into Protect Mode
+     5                                  ;-------------------------------------------------------
+     6                                  ; Kernel Loader
+     7                                  ;-------------------------------------------------------
+     8                                  
+     9                                  %include "boot.inc"
+     1                              <1> ; Loader and Kernel
+     2                              <1> 
+     3                              <1> LOADER_BASE_ADDR equ  0x900
+     4                              <1> LOADER_START_SECTOR equ 0x2
+     5                              <1> 
+     6                              <1> ; GDT Attribute
+     7                              <1> 
+     8                              <1> DESC_G_4K equ 1_00000000000000000000000b; 23
+     9                              <1> DESC_D_32 equ  1_0000000000000000000000b; 22
+    10                              <1> DESC_L    equ   0_000000000000000000000b; 21  
+    11                              <1> DESC_AVL  equ    0_00000000000000000000b; 20
+    12                              <1> DESC_LIMIT_CODE2 equ 1111_0000000000000000b; 19~16
+    13                              <1> DESC_LIMIT_DATA2 equ DESC_LIMIT_CODE2; 19~16
+    14                              <1> DESC_LIMIT_VIDEO2 equ 0000_0000000000000000b; 19~16
+    15                              <1> DESC_P equ 1_000000000000000b; 15
+    16                              <1> DESC_DPL_0 equ 00_0000000000000b; 14~13
+    17                              <1> DESC_DPL_1 equ 01_0000000000000b; 14~13
+    18                              <1> DESC_DPL_2 equ 10_0000000000000b; 14~13
+    19                              <1> DESC_DPL_3 equ 11_0000000000000b; 14~13
+    20                              <1> DESC_S_CODE equ 1_000000000000b; 12
+    21                              <1> DESC_S_DATA equ DESC_S_CODE; 12
+    22                              <1> DESC_S_sys equ 0_000000000000b; 12
+    23                              <1> DESC_TYPE_CODE equ 1000_00000000b; 11~8 x=1 c=0 r=0 a=0
+    24                              <1> DESC_TYPE_DATA equ 0010_00000000b; 11~8 x=0 e=0 w=1 a=0
+    25                              <1> 
+    29                              <1> DESC_CODE_HIGH4 equ (0x00<<24) + DESC_G_4K + DESC_D_32 + DESC_L + DESC_AVL + DESC_LIMIT_CODE2 + DESC_P + DESC_DPL_0 + DESC_S_CODE + DESC_TYPE_CODE + 0X00
+    30                              <1> 
+    34                              <1> DESC_DATA_HIGH4 equ (0x00<<24) + DESC_G_4K + DESC_D_32 + DESC_L + DESC_AVL + DESC_LIMIT_DATA2 + DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0X00
+    35                              <1> 
+    39                              <1> DESC_VIDEO_HIGH4 equ (0x00<<24) + DESC_G_4K + DESC_D_32 + DESC_L + DESC_AVL + DESC_LIMIT_VIDEO2 + DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0X0b
+    40                              <1> 
+    41                              <1> ; Selector Attribute
+    42                              <1> 
+    43                              <1> RPL0 equ 00b
+    44                              <1> RPL1 equ 01b
+    45                              <1> RPL2 equ 10b
+    46                              <1> RPL3 equ 11b
+    47                              <1> TI_GDT equ 000b
+    48                              <1> TI_LDT equ 100b
+    49                              <1> 
+    50                              <1> 
+    10                                  
+    11                                  ;-------------------------------------------------------
+    12                                  SECTION loader vstart=LOADER_BASE_ADDR
+    13                                  ;-------------------------------------------------------
+    14                                  LOADER_STACK_TOP equ LOADER_BASE_ADDR
+    15                                  ;	jmp loader_start
+    16                                  ;-------------------------------------------------------
+    17                                  ; Create GDT 
+    18                                  ;-------------------------------------------------------
+    19 00000000 00000000                	GDT_BASE: dd 0x00000000
+    20 00000004 00000000                	 		  dd 0x00000000
+    21                                  
+    22 00000008 FFFF0000                	CODE_DESC: dd 0x0000FFFF
+    23 0000000C 0098CF00                			   dd DESC_CODE_HIGH4
+    24                                  
+    25 00000010 FFFF0000                	DATA_STACK_DESC: dd 0x0000FFFF
+    26 00000014 0092CF00                					 dd DESC_DATA_HIGH4
+    27                                  	
+    28 00000018 07000080                	VIDEO_DESC: dd 0x80000007; limit=(0xbffff-0xb8000)/4k=0x7
+    29 0000001C 0B92C000                				dd DESC_VIDEO_HIGH4 
+    30                                  	
+    31                                  	GDT_SIZE equ $ - GDT_BASE
+    32                                  	GDT_LIMIT equ GDT_SIZE - 1
+    33                                  	
+    34                                  	; leave space for 60 gdt
+    35 00000020 0000000000000000-       	times 60 dq 0
+    35 00000020 <rept>             
+    36                                  ;-------------------------------------------------------
+    37                                  ; SEGMENT SELECTOR
+    38                                  ;-------------------------------------------------------
+    39                                  	SELECTOR_CODE equ (0x0001<<3) + TI_GDT + RPL0
+    40                                  	SELECTOR_DATA equ (0x0002<<3) + TI_GDT + RPL0
+    41                                  	SELECTOR_VIDEO equ (0x0003<<3) + TI_GDT + RPL0
+    42                                  ;-------------------------------------------------------
+    43                                  ; Loader Data
+    44                                  ;-------------------------------------------------------
+    45                                  	; address of total_mem_bytes -- 0xb00
+    46 00000200 00000000                	total_mem_bytes dd 0
+    47                                  
+    48 00000204 1F00                    	gdt_ptr dw GDT_LIMIT
+    49 00000206 [00000000]              			dd GDT_BASE
+    50 0000020A 00<rept>                	ards_buf times 244 db 0
+    51 000002FE 0000                    	ards_nr dw 0 ; count of ARDS
+    52                                  	
+    53 00000300 32206C6F6164657220-     	loadermsg db '2 loader in real.' 
+    53 00000309 696E207265616C2E   
+    54                                  ;-------------------------------------------------------
+    55                                  ; Loader Code	
+    56                                  ;-------------------------------------------------------
+    57                                  loader_start:
+    58                                  	
+    59                                  ;-------------------------------------------------------
+    60                                  ; INT 0X10 function_no 0x13 
+    61                                  ; Print String
+    62                                  ;-------------------------------------------------------
+    63                                  ; para: ah=0x13 : function number
+    64                                  ;		bh      : page number
+    65                                  ;		bl      : attribute
+    66                                  ; 		cx      : length of string
+    67                                  ;		(dh, dl): position 
+    68                                  ;		es:bp 	: addr of string
+    69                                  ; 		al=0x01 : display mode(1 -- string only contains chars, attribute in bl and the pos of cursor)
+    70                                  ; return: no
+    71                                  
+    72 00000311 BC0009                  	mov sp, LOADER_BASE_ADDR
+    73 00000314 BD[0003]                	mov bp, loadermsg
+    74 00000317 B91100                  	mov cx, 17
+    75 0000031A B80113                  	mov ax, 0x1301
+    76 0000031D BB1F00                  	mov bx, 0x001f
+    77 00000320 BA0018                  	mov dx, 0x1800
+    78 00000323 CD10                    	int 0x10
+    79                                  
+    80                                  ;-------------------------------------------------------
+    81                                  ; Enter Protect Mode
+    82                                  ;-------------------------------------------------------
+    83                                  ; Open A20
+    84 00000325 E492                    	in al, 0x92; ?????????????
+    85 00000327 0C02                    	or al, 0000_0010b
+    86 00000329 E692                    	out 0x92, al
+    87                                  
+    88                                  ; Load gdt
+    89 0000032B 0F0116[0402]            	lgdt [gdt_ptr]
+    90                                  
+    91                                  ; set cr0 0bit
+    92 00000330 0F20C0                  	mov eax, cr0
+    93 00000333 6683C801                	or eax, 0x00000001
+    94 00000337 0F22C0                  	mov cr0, eax
+    95                                  
+    96                                  ; Flush pipeline and serialize processor
+    97 0000033A 66EA[42030000]0800      	jmp dword SELECTOR_CODE:p_mode_start
+    98                                  
+    99                                  ;-------------------------------------------------------
+   100                                  ; Have entered the p_mode
+   101                                  ;-------------------------------------------------------
+   102                                  [bits 32]
+   103                                  p_mode_start: 
+   104 00000342 66B81000                	mov ax, SELECTOR_DATA
+   105 00000346 8ED8                    	mov ds, ax
+   106 00000348 8EC0                    	mov es, ax
+   107 0000034A 8ED0                    	mov ss, ax
+   108 0000034C BC00090000              	mov esp, LOADER_STACK_TOP
+   109 00000351 66B81800                	mov ax, SELECTOR_VIDEO
+   110 00000355 8EE8                    	mov gs, ax
+   111                                  	
+   112 00000357 65C605A000000050        	mov byte [gs : 160], 'P'
+   113                                  
+   114 0000035F EBFE                    	jmp $
