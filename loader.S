@@ -307,7 +307,7 @@ setup_page:
 	
 	; Set PTE of high_3gb_mem to kernel
 	add eax, 0X1000
-	mov ecx, 255; 1024/4 -1(first) -1(last)
+	mov ecx, 255; 1024/4 -1(last entry)
 	mov esi, 768;
 	mov ebx, PAGE_DIR_TABLE_POS
 .create_kernel_pde:
