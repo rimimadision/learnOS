@@ -4,6 +4,8 @@
 ; 	Get into Protect Mode
 ; @petrel 2021/4/7 18:46
 ; 	Add detect_mem
+; @petrel 2021/4/8 20:33
+;	Open PG
 ;-------------------------------------------------------
 ; Kernel Loader
 ;-------------------------------------------------------
@@ -213,7 +215,7 @@ print_msg:
 ; Enter Protect Mode
 ;-------------------------------------------------------
 ; Open A20
-	in al, 0x92; ?????????????
+	in al, 0x92
 	or al, 0000_0010b
 	out 0x92, al
 
@@ -241,6 +243,90 @@ p_mode_start:
 	mov ax, SELECTOR_VIDEO
 	mov gs, ax
 	
-	mov byte [gs : 160], 'P'
+;	mov byte [gs : 160], 'P'
+
+;-------------------------------------------------------
+; Open PG
+;-------------------------------------------------------
+	call setup_page
+		
+	sgdt [gdt_ptr]
+	
+	; Reflect video segment to high 3gb	
+	mov ebx, [gdt_ptr + 2]
+	or dword [ebx + 24 + 4], 0xc0000000
+	
+	;Reflect gdt to high 3gb
+	or dword [gdt_ptr + 2], 0xc0000000
+	
+	; Reflect stack to high 3gb
+	or esp, 0xc0000000	
+
+	; Set cr3 with addr of PDE
+	mov eax, PAGE_DIR_TABLE_POS
+	mov cr3, eax
+	
+	; Set cr0 PG
+	mov eax, cr0
+	or eax, 0x80000000
+	mov cr0, eax
+
+	lgdt [gdt_ptr]
+
+	mov byte [gs:160], 'V'
 
 	jmp $
+
+;-------------------------------------------------------
+; Function: setup_page
+; Prepare for opening PG
+;-------------------------------------------------------
+; para: no
+; return: no
+; note: function will set up PDE and PTE.
+; 		eax, ecx, esi, edx.... will be changed
+; 		so just take this function as a process 
+setup_page:
+	
+	; Init 4kb PDE to 0
+	mov ecx, 4096
+	mov esi, 0
+.clear_page_dir:
+	mov byte [PAGE_DIR_TABLE_POS + esi], 0
+	inc esi
+	loop .clear_page_dir
+
+	; Create PDE for first entry
+	mov eax, PAGE_DIR_TABLE_POS + 0X1000
+	or eax, PG_US_U | PG_RW_W | PG_P
+	mov [PAGE_DIR_TABLE_POS], eax
+
+	; Set the last entry point PDE itself
+	sub eax, 0x1000
+	mov [PAGE_DIR_TABLE_POS + 4092], eax
+	
+	; Set PTE of high_3gb_mem to kernel
+	add eax, 0X1000
+	mov ecx, 255; 1024/4 -1(first) -1(last)
+	mov esi, 768;
+	mov ebx, PAGE_DIR_TABLE_POS
+.create_kernel_pde:
+	mov [ebx + esi * 4], eax
+	inc esi
+	add eax, 0x1000
+	loop .create_kernel_pde
+
+	; Create PTE
+	mov ecx, 256; 256 * 4kb = 1mb
+	mov esi, 0
+	mov ebx, PAGE_DIR_TABLE_POS + 0X1000
+	mov edx, PG_US_U | PG_RW_W | PG_P
+.create_pte:
+	mov [ebx + esi * 4], edx
+	inc esi
+	add edx, 0x1000
+	loop .create_pte
+
+	ret
+	
+;-------------------------------------------------------
