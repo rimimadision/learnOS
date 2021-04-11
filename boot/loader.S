@@ -6,6 +6,8 @@
 ; 	Add detect_mem
 ; @petrel 2021/4/8 20:33
 ;	Open PG
+; @petrel 2021/4/11 22:14
+;  	Load kernel
 ;-------------------------------------------------------
 ; Kernel Loader
 ;-------------------------------------------------------
@@ -246,6 +248,15 @@ p_mode_start:
 ;	mov byte [gs : 160], 'P'
 
 ;-------------------------------------------------------
+; Load kernel
+;-------------------------------------------------------
+	mov eax, KERNEL_START_SECTOR
+	mov ebx, KERNEL_BIN_BASE_ADDR
+
+	mov ecx, 200
+
+	call rd_disk_m_32
+;-------------------------------------------------------
 ; Open PG
 ;-------------------------------------------------------
 	call setup_page
@@ -276,7 +287,23 @@ p_mode_start:
 	mov byte [gs:160], 'V'
 
 	jmp $
+;-------------------------------------------------------
+; Init kernel
+;-------------------------------------------------------
+kernel_init:
+	xor eax, eax
+	xor ebx, ebx; record ph_addr
+	xor ecx, ecx; record num_ph
+	xor edx, edx; record ph_size
 
+	mov dx, [KERNEL_BIN_BASE_ADDR]
+	mov cx, [KERNEL_BIN_BASE_ADDR + 44]
+
+.each_segment:
+	cmp byte [ebx], PT_NULL
+	je .PTNULL
+
+	push dword [ebx + 16]
 ;-------------------------------------------------------
 ; Function: setup_page
 ; Prepare for opening PG
@@ -328,5 +355,62 @@ setup_page:
 	loop .create_pte
 
 	ret
+;--------------------------------------------------------------------------------------
+; function : read n sector from disk
+rd_disk_m_32:
+;--------------------------------------------------------------------------------------
+; para : eax : LBA sector number
+;		 ebx : addr to save the content
+;        ecx : num of sector to read
+; return : no
 	
-;-------------------------------------------------------
+    mov esi, eax
+    mov di, cx
+
+    mov dx, 0x1f2
+    mov al, cl
+    out dx, al
+
+    mov eax, esi
+
+    mov dx, 0x1f3
+    out dx, al
+
+    mov cl, 8
+    shr eax, cl
+    mov dx, 0x1f4
+    out dx, al
+
+    shr eax, cl
+    mov dx, 0x1f5
+    out dx, al
+
+    shr eax, cl
+    and al, 0x0f
+    or al, 0xe0
+    mov dx, 0x1f6
+    out dx, al
+
+    mov dx, 0x1f7
+    mov al, 0x20
+    out dx, al
+
+.not_ready:
+    nop
+    in al, dx
+    and al, 0x88
+    cmp al, 0x08
+    jnz .not_ready
+
+    mov ax, di
+    mov dx, 256
+    mul dx
+    mov cx, ax
+    mov dx, 0x1f0
+
+.go_on_read:
+    in ax, dx
+    mov [bx], ax
+    add bx, 2
+    loop .go_on_read
+    ret
