@@ -284,9 +284,13 @@ p_mode_start:
 
 	lgdt [gdt_ptr]
 
-	mov byte [gs:160], 'V'
+	jmp SELECTOR_CODE:enter_kernel
 
-	jmp $
+enter_kernel:
+	call kernel_init
+	mov esp, 08047000
+	jmp KERNEL_ENTRY_POINT
+
 ;-------------------------------------------------------
 ; Init kernel
 ;-------------------------------------------------------
@@ -295,15 +299,60 @@ kernel_init:
 	xor ebx, ebx; record ph_addr
 	xor ecx, ecx; record num_ph
 	xor edx, edx; record ph_size
+	
+	; Get ph_size
+	mov dx, [KERNEL_BIN_BASE_ADDR + 42]
+	
+	; Get ph_addr
+	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]
+	add ebx, KERNEL_BIN_BASE_ADDR
 
-	mov dx, [KERNEL_BIN_BASE_ADDR]
+	; Get ph_num
 	mov cx, [KERNEL_BIN_BASE_ADDR + 44]
 
+	; Judge if segment null
 .each_segment:
 	cmp byte [ebx], PT_NULL
 	je .PTNULL
-
+	
+	; Push pflie_size, src, dst
 	push dword [ebx + 16]
+	mov eax, [ebx + 4]
+	add eax, KERNEL_BASE_ADDR
+	push eax
+	push dword [ebx + 8]
+	call mem_cpy
+	add esp, 12
+.PTNULL:
+	add ebx, edx
+
+	loop .each_segment
+
+	ret
+
+;-------------------------------------------------------
+; Function: mem_cpy
+;-------------------------------------------------------
+; para: [esp+8]  dst
+;		[esp+12] src
+;		[esp+16] byte_num
+; return: no
+;
+mem_cpy:
+	cld
+	push ebp
+	mov ebp, esp
+	push ecx
+	mov edi, [ebp + 8]
+	mov esi, [ebp + 12]
+	mov ecx, [ebp + 16]
+
+	rep movsb
+	
+	pop ecx
+	pop ebp
+	ret
+
 ;-------------------------------------------------------
 ; Function: setup_page
 ; Prepare for opening PG
