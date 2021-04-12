@@ -59,8 +59,6 @@ LOADER_STACK_TOP equ LOADER_BASE_ADDR
 	ards_buf times 244 db 0
 	ards_nr dw 0 ; count of ARDS
 	
-;	loadermsg db '2 loader in real.' 
-
 ;-------------------------------------------------------
 ; Loader Code	
 ;-------------------------------------------------------
@@ -245,7 +243,7 @@ p_mode_start:
 	mov ax, SELECTOR_VIDEO
 	mov gs, ax
 	
-;	mov byte [gs : 160], 'P'
+;	mov byte [gs : 162], 'P'
 
 ;-------------------------------------------------------
 ; Load kernel
@@ -287,8 +285,11 @@ p_mode_start:
 	jmp SELECTOR_CODE:enter_kernel
 
 enter_kernel:
+	mov byte [gs : 160], 'K'
 	call kernel_init
-	mov esp, 08047000
+	mov esp, 0xc009f000
+	mov byte [gs : 160], 'J'
+;	jmp $
 	jmp KERNEL_ENTRY_POINT
 
 ;-------------------------------------------------------
@@ -318,7 +319,7 @@ kernel_init:
 	; Push pflie_size, src, dst
 	push dword [ebx + 16]
 	mov eax, [ebx + 4]
-	add eax, KERNEL_BASE_ADDR
+	add eax, KERNEL_BIN_BASE_ADDR
 	push eax
 	push dword [ebx + 8]
 	call mem_cpy
@@ -459,7 +460,7 @@ rd_disk_m_32:
 
 .go_on_read:
     in ax, dx
-    mov [bx], ax
-    add bx, 2
+    mov [ebx], ax
+    add ebx, 2
     loop .go_on_read
     ret

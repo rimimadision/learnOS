@@ -1,0 +1,523 @@
+     1                                  ; @petrel 2021/3/31 16:36
+     2                                  ; 	Create the loader file
+     3                                  ; @petrel 2021/4/6 16:36
+     4                                  ; 	Get into Protect Mode
+     5                                  ; @petrel 2021/4/7 18:46
+     6                                  ; 	Add detect_mem
+     7                                  ; @petrel 2021/4/8 20:33
+     8                                  ;	Open PG
+     9                                  ; @petrel 2021/4/11 22:14
+    10                                  ;  	Load kernel
+    11                                  ;-------------------------------------------------------
+    12                                  ; Kernel Loader
+    13                                  ;-------------------------------------------------------
+    14                                  
+    15                                  %include "boot.inc"
+     1                              <1> ; Loader and Kernel
+     2                              <1> 
+     3                              <1> LOADER_BASE_ADDR equ  0x900
+     4                              <1> LOADER_START_SECTOR equ 0x2
+     5                              <1> 
+     6                              <1> ; GDT Attribute
+     7                              <1> 
+     8                              <1> DESC_G_4K equ 1_00000000000000000000000b; 23
+     9                              <1> DESC_D_32 equ  1_0000000000000000000000b; 22
+    10                              <1> DESC_L    equ   0_000000000000000000000b; 21  
+    11                              <1> DESC_AVL  equ    0_00000000000000000000b; 20
+    12                              <1> DESC_LIMIT_CODE2 equ 1111_0000000000000000b; 19~16
+    13                              <1> DESC_LIMIT_DATA2 equ DESC_LIMIT_CODE2; 19~16
+    14                              <1> DESC_LIMIT_VIDEO2 equ 0000_0000000000000000b; 19~16
+    15                              <1> DESC_P equ 1_000000000000000b; 15
+    16                              <1> DESC_DPL_0 equ 00_0000000000000b; 14~13
+    17                              <1> DESC_DPL_1 equ 01_0000000000000b; 14~13
+    18                              <1> DESC_DPL_2 equ 10_0000000000000b; 14~13
+    19                              <1> DESC_DPL_3 equ 11_0000000000000b; 14~13
+    20                              <1> DESC_S_CODE equ 1_000000000000b; 12
+    21                              <1> DESC_S_DATA equ DESC_S_CODE; 12
+    22                              <1> DESC_S_sys equ 0_000000000000b; 12
+    23                              <1> DESC_TYPE_CODE equ 1000_00000000b; 11~8 x=1 c=0 r=0 a=0
+    24                              <1> DESC_TYPE_DATA equ 0010_00000000b; 11~8 x=0 e=0 w=1 a=0
+    25                              <1> 
+    29                              <1> DESC_CODE_HIGH4 equ (0x00<<24) + DESC_G_4K + DESC_D_32 + DESC_L + DESC_AVL + DESC_LIMIT_CODE2 + DESC_P + DESC_DPL_0 + DESC_S_CODE + DESC_TYPE_CODE + 0X00
+    30                              <1> 
+    34                              <1> DESC_DATA_HIGH4 equ (0x00<<24) + DESC_G_4K + DESC_D_32 + DESC_L + DESC_AVL + DESC_LIMIT_DATA2 + DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0X00
+    35                              <1> 
+    39                              <1> DESC_VIDEO_HIGH4 equ (0x00<<24) + DESC_G_4K + DESC_D_32 + DESC_L + DESC_AVL + DESC_LIMIT_VIDEO2 + DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0X0b
+    40                              <1> 
+    41                              <1> ; Selector Attribute
+    42                              <1> 
+    43                              <1> RPL0 equ 00b
+    44                              <1> RPL1 equ 01b
+    45                              <1> RPL2 equ 10b
+    46                              <1> RPL3 equ 11b
+    47                              <1> TI_GDT equ 000b
+    48                              <1> TI_LDT equ 100b
+    49                              <1> 
+    50                              <1> ; PAGE 
+    51                              <1> 
+    52                              <1> PAGE_DIR_TABLE_POS equ 0x100000
+    53                              <1> PG_P equ 1b
+    54                              <1> PG_RW_R equ 00b
+    55                              <1> PG_RW_W equ 10b
+    56                              <1> PG_US_S equ 000b
+    57                              <1> PG_US_U equ 100b
+    58                              <1> 
+    59                              <1> ; Kernel
+    60                              <1> 
+    61                              <1> KERNEL_START_SECTOR equ 0X9
+    62                              <1> KERNEL_BIN_BASE_ADDR equ 0X70000
+    63                              <1> KERNEL_ENTRY_POINT equ 0xc0001500
+    64                              <1> PT_NULL equ 0
+    16                                  
+    17                                  ;-------------------------------------------------------
+    18                                  SECTION loader vstart=LOADER_BASE_ADDR
+    19                                  
+    20                                  LOADER_STACK_TOP equ LOADER_BASE_ADDR
+    21                                  ;	jmp loader_start
+    22                                  
+    23                                  ;-------------------------------------------------------
+    24                                  ; Create GDT 
+    25                                  ;-------------------------------------------------------
+    26 00000000 00000000                	GDT_BASE: dd 0x00000000
+    27 00000004 00000000                	 		  dd 0x00000000
+    28                                  
+    29 00000008 FFFF0000                	CODE_DESC: dd 0x0000FFFF
+    30 0000000C 0098CF00                			   dd DESC_CODE_HIGH4
+    31                                  
+    32 00000010 FFFF0000                	DATA_STACK_DESC: dd 0x0000FFFF
+    33 00000014 0092CF00                					 dd DESC_DATA_HIGH4
+    34                                  	
+    35 00000018 07000080                	VIDEO_DESC: dd 0x80000007; limit=(0xbffff-0xb8000)/4k=0x7
+    36 0000001C 0B92C000                				dd DESC_VIDEO_HIGH4 
+    37                                  	
+    38                                  	GDT_SIZE equ $ - GDT_BASE
+    39                                  	GDT_LIMIT equ GDT_SIZE - 1
+    40                                  	
+    41                                  	; leave space for 60 gdt
+    42 00000020 0000000000000000-       	times 60 dq 0
+    42 00000020 <rept>             
+    43                                  
+    44                                  ;-------------------------------------------------------
+    45                                  ; SEGMENT SELECTOR
+    46                                  ;-------------------------------------------------------
+    47                                  	SELECTOR_CODE equ (0x0001<<3) + TI_GDT + RPL0
+    48                                  	SELECTOR_DATA equ (0x0002<<3) + TI_GDT + RPL0
+    49                                  	SELECTOR_VIDEO equ (0x0003<<3) + TI_GDT + RPL0
+    50                                  
+    51                                  ;-------------------------------------------------------
+    52                                  ; Loader Data
+    53                                  ;-------------------------------------------------------
+    54                                  	; address of total_mem_bytes -- 0xb00
+    55 00000200 00000000                	total_mem_bytes dd 0
+    56                                  
+    57 00000204 1F00                    	gdt_ptr dw GDT_LIMIT
+    58 00000206 [00000000]              			dd GDT_BASE
+    59 0000020A 00<rept>                	ards_buf times 244 db 0
+    60 000002FE 0000                    	ards_nr dw 0 ; count of ARDS
+    61                                  	
+    62                                  ;-------------------------------------------------------
+    63                                  ; Loader Code	
+    64                                  ;-------------------------------------------------------
+    65                                  loader_start:
+    66                                  
+    67                                  ;-------------------------------------------------------
+    68                                  ; Detect memory 
+    69                                  ; int 0x15h
+    70                                  ; function code : 0xe820
+    71                                  ;-------------------------------------------------------
+    72                                  ; para: eax=0x0000e820 : function code
+    73                                  ; 		ebx=0          : initialize ebx 0, ebx will save
+    74                                  ;                        the position of next ards
+    75                                  ; 		edx=0x534d150  : signature certificate, unchange
+    76                                  ; 		es:di          : buff for ards
+    77                                  ; 		ecx=20         : ards size
+    78                                  ; ret:  cf			: call success for cf=0
+    79                                  ;		eax=edx		 
+    80                                  ;   	[es:di]		: ards struct
+    81                                  ;		ecx			: count bytes of ards struct
+    82                                  ;		ebx			: next ards
+    83                                  
+    84 00000300 6631DB                  	xor ebx, ebx
+    85 00000303 66BA50414D53            	mov edx, 0x534d4150
+    86 00000309 BF[0A02]                	mov di, ards_buf
+    87                                  
+    88                                  .e820_mem_get_loop:
+    89 0000030C 66B820E80000            	mov eax, 0x0000e820
+    90 00000312 66B914000000            	mov ecx, 20 	
+    91 00000318 CD15                    	int 0x15
+    92 0000031A 7235                    	jc .e820_failed_so_try_e801
+    93                                  
+    94 0000031C 01CF                    	add di, cx
+    95 0000031E FF06[FE02]              	inc word [ards_nr]
+    96                                  	
+    97                                  	; if ebx=0 and cf=0, ards all return 
+    98 00000322 6683FB00                	cmp ebx, 0
+    99 00000326 75E4                    	jnz .e820_mem_get_loop
+   100                                  
+   101                                  ; go through to find max ards
+   102 00000328 6631C9                  	xor ecx, ecx
+   103 0000032B 8B0E[FE02]              	mov cx, [ards_nr]
+   104 0000032F 66BB[0A020000]          	mov ebx, ards_buf
+   105 00000335 6631D2                  	xor edx, edx
+   106                                  
+   107                                  .find_max_mem_area: 
+   108 00000338 66678B03                	mov eax, [ebx]
+   109 0000033C 6667034308              	add eax, [ebx + 8]
+   110 00000341 6683C314                	add ebx, 20
+   111 00000345 6639C2                  	cmp edx, eax
+   112 00000348 7D03                    	jge .next_ards
+   113 0000034A 6689C2                  	mov edx, eax
+   114                                  
+   115                                  .next_ards:
+   116 0000034D E2E9                    	loop .find_max_mem_area
+   117 0000034F EB58                    	jmp .mem_get_ok
+   118                                  ;-------------------------------------------------------
+   119                                  ; Detect memory (lower than 4gb)
+   120                                  ; int 0x15h
+   121                                  ; function code : 0xe801
+   122                                  ;-------------------------------------------------------
+   123                                  ; para: ax=0xe801 : function code
+   124                                  ; ret:  cf			: call success for cf=0
+   125                                  ;		ax          		 
+   126                                  ;   	bx           
+   127                                  ;		cx=ax
+   128                                  ;		dx=bx	
+   129                                  ;		mem_size = (ax*1kb + 1 ) + bx*64kb		
+   130                                  
+   131                                  .e820_failed_so_try_e801:
+   132 00000351 B801E8                  	mov ax, 0xe801
+   133 00000354 CD15                    	int 0x15
+   134 00000356 7232                    	jc .e801_failed_so_try_88
+   135                                  
+   136                                  ; get mem_size lower than 15mb
+   137 00000358 B90004                  	mov cx, 0x400
+   138 0000035B F7E1                    	mul cx
+   139 0000035D 6625FFFF0000            	and eax, 0x0000ffff
+   140 00000363 66C1E210                	shl edx, 16
+   141 00000367 6609C2                  	or edx, eax
+   142 0000036A 6681C200001000          	add edx, 0x100000; add 1mb for no mem_hole
+   143 00000371 6689D6                  	mov esi, edx; back-up mem_low_15mb
+   144                                  
+   145                                  ; get mem_size 16mb ~ 4gb
+   146 00000374 6631C0                  	xor eax, eax
+   147 00000377 89D8                    	mov ax, bx
+   148 00000379 66B900000100            	mov ecx, 0x10000	 
+   149 0000037F 66F7E1                  	mul ecx
+   150 00000382 6689C2                  	mov edx, eax; for mem lower than 4gb
+   151                                  				; eax with 32bits is sufficient
+   152 00000385 6601F2                  	add edx, esi
+   153 00000388 EB1F                    	jmp .mem_get_ok
+   154                                  	
+   155                                  ;-------------------------------------------------------
+   156                                  ; Detect memory (lower than 64mb)
+   157                                  ; int 0x15h
+   158                                  ; function code : 0x88
+   159                                  ;-------------------------------------------------------
+   160                                  ; para: ah=0x88 : function code
+   161                                  ; ret:  cf	: call success for cf=0
+   162                                  ;		ax         		 
+   163                                  ;		mem_size = ax*1kb + 1mb		
+   164                                  
+   165                                  .e801_failed_so_try_88:	
+   166 0000038A B488                    	mov ah, 0x88
+   167 0000038C CD15                    	int 0x15
+   168                                  ;undefin for now
+   169                                  ;	jc .error_hlt
+   170                                  	
+   171                                  ; get mem_size
+   172 0000038E B90004                  	mov cx, 0x400
+   173 00000391 F7E1                    	mul cx
+   174 00000393 6625FFFF0000            	and eax, 0x0000ffff
+   175 00000399 66C1E210                	shl edx, 16
+   176 0000039D 6609C2                  	or edx, eax
+   177 000003A0 6681C200001000          	add edx, 0x100000
+   178                                  
+   179 000003A7 EB00                    	jmp .mem_get_ok
+   180                                  ;-------------------------------------------------------
+   181                                  ; Finish detecting memory 
+   182                                  ;-------------------------------------------------------
+   183                                  ; para:	edx : mem_size detected
+   184                                  ; ret:  [total_mem_bytes] : record mem_size
+   185                                  
+   186                                  .mem_get_ok:
+   187 000003A9 668916[0002]            	mov [total_mem_bytes], edx; edx contain count of mem_size with bytes 
+   188                                  
+   189                                  ;-------------------------------------------------------
+   190                                  ; INT 0X10 function_no 0x13 
+   191                                  ; Print String
+   192                                  ;-------------------------------------------------------
+   193                                  ; para: ah=0x13 : function code
+   194                                  ;		bh      : page number
+   195                                  ;		bl      : attribute
+   196                                  ; 		cx      : length of string
+   197                                  ;		(dh, dl): position 
+   198                                  ;		es:bp 	: addr of string
+   199                                  ; 		al=0x01 : display mode(1 -- string only contains chars, attribute in bl and the pos of cursor)
+   200                                  ; return: no
+   201 000003AE EB11                    	jmp print_msg
+   202                                  		
+   203 000003B0 6D656D2073697A6520-     	loadermsg db "mem size confirm!"
+   203 000003B9 636F6E6669726D21   
+   204                                  
+   205                                  print_msg:
+   206 000003C1 BC0009                  	mov sp, LOADER_BASE_ADDR
+   207 000003C4 BD[B003]                	mov bp, loadermsg
+   208 000003C7 B91100                  	mov cx, 17
+   209 000003CA B80113                  	mov ax, 0x1301
+   210 000003CD BB1F00                  	mov bx, 0x001f
+   211 000003D0 BA0018                  	mov dx, 0x1800
+   212 000003D3 CD10                    	int 0x10
+   213                                  
+   214                                  ;-------------------------------------------------------
+   215                                  ; Enter Protect Mode
+   216                                  ;-------------------------------------------------------
+   217                                  ; Open A20
+   218 000003D5 E492                    	in al, 0x92
+   219 000003D7 0C02                    	or al, 0000_0010b
+   220 000003D9 E692                    	out 0x92, al
+   221                                  
+   222                                  ; Load gdt
+   223 000003DB 0F0116[0402]            	lgdt [gdt_ptr]
+   224                                  
+   225                                  ; set cr0 0bit
+   226 000003E0 0F20C0                  	mov eax, cr0
+   227 000003E3 6683C801                	or eax, 0x00000001
+   228 000003E7 0F22C0                  	mov cr0, eax
+   229                                  
+   230                                  ; Flush pipeline and serialize processor
+   231 000003EA 66EA[F2030000]0800      	jmp dword SELECTOR_CODE:p_mode_start
+   232                                  
+   233                                  ;-------------------------------------------------------
+   234                                  ; Have entered the p_mode
+   235                                  ;-------------------------------------------------------
+   236                                  [bits 32]
+   237                                  p_mode_start: 
+   238 000003F2 66B81000                	mov ax, SELECTOR_DATA
+   239 000003F6 8ED8                    	mov ds, ax
+   240 000003F8 8EC0                    	mov es, ax
+   241 000003FA 8ED0                    	mov ss, ax
+   242 000003FC BC00090000              	mov esp, LOADER_STACK_TOP
+   243 00000401 66B81800                	mov ax, SELECTOR_VIDEO
+   244 00000405 8EE8                    	mov gs, ax
+   245                                  	
+   246                                  ;	mov byte [gs : 162], 'P'
+   247                                  
+   248                                  ;-------------------------------------------------------
+   249                                  ; Load kernel
+   250                                  ;-------------------------------------------------------
+   251 00000407 B809000000              	mov eax, KERNEL_START_SECTOR
+   252 0000040C BB00000700              	mov ebx, KERNEL_BIN_BASE_ADDR
+   253                                  
+   254 00000411 B9C8000000              	mov ecx, 200
+   255                                  
+   256 00000416 E822010000              	call rd_disk_m_32
+   257                                  ;-------------------------------------------------------
+   258                                  ; Open PG
+   259                                  ;-------------------------------------------------------
+   260 0000041B E8B2000000              	call setup_page
+   261                                  		
+   262 00000420 0F0105[04020000]        	sgdt [gdt_ptr]
+   263                                  	
+   264                                  	; Reflect video segment to high 3gb	
+   265 00000427 8B1D[06020000]          	mov ebx, [gdt_ptr + 2]
+   266 0000042D 814B1C000000C0          	or dword [ebx + 24 + 4], 0xc0000000
+   267                                  	
+   268                                  	;Reflect gdt to high 3gb
+   269 00000434 810D[06020000]0000-     	or dword [gdt_ptr + 2], 0xc0000000
+   269 0000043C 00C0               
+   270                                  	
+   271                                  	; Reflect stack to high 3gb
+   272 0000043E 81CC000000C0            	or esp, 0xc0000000	
+   273                                  
+   274                                  	; Set cr3 with addr of PDE
+   275 00000444 B800001000              	mov eax, PAGE_DIR_TABLE_POS
+   276 00000449 0F22D8                  	mov cr3, eax
+   277                                  	
+   278                                  	; Set cr0 PG
+   279 0000044C 0F20C0                  	mov eax, cr0
+   280 0000044F 0D00000080              	or eax, 0x80000000
+   281 00000454 0F22C0                  	mov cr0, eax
+   282                                  
+   283 00000457 0F0115[04020000]        	lgdt [gdt_ptr]
+   284                                  
+   285 0000045E EA[65040000]0800        	jmp SELECTOR_CODE:enter_kernel
+   286                                  
+   287                                  enter_kernel:
+   288 00000465 65C605A00000004B        	mov byte [gs : 160], 'K'
+   289 0000046D E80A000000              	call kernel_init
+   290 00000472 BC00F009C0              	mov esp, 0xc009f000
+   291                                  ;	jmp $
+   292 00000477 E9(001500C0)            	jmp KERNEL_ENTRY_POINT
+   293                                  
+   294                                  ;-------------------------------------------------------
+   295                                  ; Init kernel
+   296                                  ;-------------------------------------------------------
+   297                                  kernel_init:
+   298 0000047C 31C0                    	xor eax, eax
+   299 0000047E 31DB                    	xor ebx, ebx; record ph_addr
+   300 00000480 31C9                    	xor ecx, ecx; record num_ph
+   301 00000482 31D2                    	xor edx, edx; record ph_size
+   302                                  	
+   303                                  	; Get ph_size
+   304 00000484 668B152A000700          	mov dx, [KERNEL_BIN_BASE_ADDR + 42]
+   305                                  	
+   306                                  	; Get ph_addr
+   307 0000048B 8B1D1C000700            	mov ebx, [KERNEL_BIN_BASE_ADDR + 28]
+   308 00000491 81C300000700            	add ebx, KERNEL_BIN_BASE_ADDR
+   309                                  
+   310                                  	; Get ph_num
+   311 00000497 668B0D2C000700          	mov cx, [KERNEL_BIN_BASE_ADDR + 44]
+   312                                  
+   313                                  	; Judge if segment null
+   314                                  .each_segment:
+   315 0000049E 803B00                  	cmp byte [ebx], PT_NULL
+   316 000004A1 7417                    	je .PTNULL
+   317                                  	
+   318                                  	; Push pflie_size, src, dst
+   319 000004A3 FF7310                  	push dword [ebx + 16]
+   320 000004A6 8B4304                  	mov eax, [ebx + 4]
+   321 000004A9 0500000700              	add eax, KERNEL_BIN_BASE_ADDR
+   322 000004AE 50                      	push eax
+   323 000004AF FF7308                  	push dword [ebx + 8]
+   324 000004B2 E808000000              	call mem_cpy
+   325 000004B7 83C40C                  	add esp, 12
+   326                                  .PTNULL:
+   327 000004BA 01D3                    	add ebx, edx
+   328                                  
+   329 000004BC E2E0                    	loop .each_segment
+   330                                  
+   331 000004BE C3                      	ret
+   332                                  
+   333                                  ;-------------------------------------------------------
+   334                                  ; Function: mem_cpy
+   335                                  ;-------------------------------------------------------
+   336                                  ; para: [esp+8]  dst
+   337                                  ;		[esp+12] src
+   338                                  ;		[esp+16] byte_num
+   339                                  ; return: no
+   340                                  ;
+   341                                  mem_cpy:
+   342 000004BF FC                      	cld
+   343 000004C0 55                      	push ebp
+   344 000004C1 89E5                    	mov ebp, esp
+   345 000004C3 51                      	push ecx
+   346 000004C4 8B7D08                  	mov edi, [ebp + 8]
+   347 000004C7 8B750C                  	mov esi, [ebp + 12]
+   348 000004CA 8B4D10                  	mov ecx, [ebp + 16]
+   349                                  
+   350 000004CD F3A4                    	rep movsb
+   351                                  	
+   352 000004CF 59                      	pop ecx
+   353 000004D0 5D                      	pop ebp
+   354 000004D1 C3                      	ret
+   355                                  
+   356                                  ;-------------------------------------------------------
+   357                                  ; Function: setup_page
+   358                                  ; Prepare for opening PG
+   359                                  ;-------------------------------------------------------
+   360                                  ; para: no
+   361                                  ; return: no
+   362                                  ; note: function will set up PDE and PTE.
+   363                                  ; 		eax, ecx, esi, edx.... will be changed
+   364                                  ; 		so just take this function as a process 
+   365                                  setup_page:
+   366                                  	
+   367                                  	; Init 4kb PDE to 0
+   368 000004D2 B900100000              	mov ecx, 4096
+   369 000004D7 BE00000000              	mov esi, 0
+   370                                  .clear_page_dir:
+   371 000004DC C6860000100000          	mov byte [PAGE_DIR_TABLE_POS + esi], 0
+   372 000004E3 46                      	inc esi
+   373 000004E4 E2F6                    	loop .clear_page_dir
+   374                                  
+   375                                  	; Create PDE for first entry
+   376 000004E6 B800101000              	mov eax, PAGE_DIR_TABLE_POS + 0X1000
+   377 000004EB 83C807                  	or eax, PG_US_U | PG_RW_W | PG_P
+   378 000004EE A300001000              	mov [PAGE_DIR_TABLE_POS], eax
+   379                                  
+   380                                  	; Set the last entry point PDE itself
+   381 000004F3 2D00100000              	sub eax, 0x1000
+   382 000004F8 A3FC0F1000              	mov [PAGE_DIR_TABLE_POS + 4092], eax
+   383                                  	
+   384                                  	; Set PTE of high_3gb_mem to kernel
+   385 000004FD 0500100000              	add eax, 0X1000
+   386 00000502 B9FF000000              	mov ecx, 255; 1024/4 -1(last entry)
+   387 00000507 BE00030000              	mov esi, 768;
+   388 0000050C BB00001000              	mov ebx, PAGE_DIR_TABLE_POS
+   389                                  .create_kernel_pde:
+   390 00000511 8904B3                  	mov [ebx + esi * 4], eax
+   391 00000514 46                      	inc esi
+   392 00000515 0500100000              	add eax, 0x1000
+   393 0000051A E2F5                    	loop .create_kernel_pde
+   394                                  
+   395                                  	; Create PTE
+   396 0000051C B900010000              	mov ecx, 256; 256 * 4kb = 1mb
+   397 00000521 BE00000000              	mov esi, 0
+   398 00000526 BB00101000              	mov ebx, PAGE_DIR_TABLE_POS + 0X1000
+   399 0000052B BA07000000              	mov edx, PG_US_U | PG_RW_W | PG_P
+   400                                  .create_pte:
+   401 00000530 8914B3                  	mov [ebx + esi * 4], edx
+   402 00000533 46                      	inc esi
+   403 00000534 81C200100000            	add edx, 0x1000
+   404 0000053A E2F4                    	loop .create_pte
+   405                                  
+   406 0000053C C3                      	ret
+   407                                  ;--------------------------------------------------------------------------------------
+   408                                  ; function : read n sector from disk
+   409                                  rd_disk_m_32:
+   410                                  ;--------------------------------------------------------------------------------------
+   411                                  ; para : eax : LBA sector number
+   412                                  ;		 ebx : addr to save the content
+   413                                  ;        ecx : num of sector to read
+   414                                  ; return : no
+   415                                  	
+   416 0000053D 89C6                        mov esi, eax
+   417 0000053F 6689CF                      mov di, cx
+   418                                  
+   419 00000542 66BAF201                    mov dx, 0x1f2
+   420 00000546 88C8                        mov al, cl
+   421 00000548 EE                          out dx, al
+   422                                  
+   423 00000549 89F0                        mov eax, esi
+   424                                  
+   425 0000054B 66BAF301                    mov dx, 0x1f3
+   426 0000054F EE                          out dx, al
+   427                                  
+   428 00000550 B108                        mov cl, 8
+   429 00000552 D3E8                        shr eax, cl
+   430 00000554 66BAF401                    mov dx, 0x1f4
+   431 00000558 EE                          out dx, al
+   432                                  
+   433 00000559 D3E8                        shr eax, cl
+   434 0000055B 66BAF501                    mov dx, 0x1f5
+   435 0000055F EE                          out dx, al
+   436                                  
+   437 00000560 D3E8                        shr eax, cl
+   438 00000562 240F                        and al, 0x0f
+   439 00000564 0CE0                        or al, 0xe0
+   440 00000566 66BAF601                    mov dx, 0x1f6
+   441 0000056A EE                          out dx, al
+   442                                  
+   443 0000056B 66BAF701                    mov dx, 0x1f7
+   444 0000056F B020                        mov al, 0x20
+   445 00000571 EE                          out dx, al
+   446                                  
+   447                                  .not_ready:
+   448 00000572 90                          nop
+   449 00000573 EC                          in al, dx
+   450 00000574 2488                        and al, 0x88
+   451 00000576 3C08                        cmp al, 0x08
+   452 00000578 75F8                        jnz .not_ready
+   453                                  
+   454 0000057A 6689F8                      mov ax, di
+   455 0000057D 66BA0001                    mov dx, 256
+   456 00000581 66F7E2                      mul dx
+   457 00000584 6689C1                      mov cx, ax
+   458 00000587 66BAF001                    mov dx, 0x1f0
+   459                                  
+   460                                  .go_on_read:
+   461 0000058B 66ED                        in ax, dx
+   462 0000058D 668903                      mov [ebx], ax
+   463 00000590 6683C302                    add bx, 2
+   464 00000594 E2F5                        loop .go_on_read
+   465 00000596 C3                          ret

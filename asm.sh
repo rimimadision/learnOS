@@ -2,8 +2,11 @@
 
 nasm -I include/ -o ./bin/mbr.bin ./boot/mbr.S
 nasm -I include/ -o ./bin/loader.bin ./boot/loader.S
-gcc -c -o ./kernel/main.o ./kernel/main.c -m32
-ld kernel/main.o -Ttext 0xc0001500 -e main -o ./bin/kernel.bin -m elf_i386
+
+# I can't get correct result using gcc64, so I use gcc32 on another linux to get kernel.bin
+# The shell code is same as below 
+#gcc -c -o ./kernel/main.o ./kernel/main.c
+#ld kernel/main.o -Ttext 0xc0001500 -e main -o ./bin/kernel.bin 
 
 cd /usr/local/bochs/bin/
 
