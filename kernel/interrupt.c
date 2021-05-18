@@ -4,6 +4,10 @@
 #include"io.h"
 
 #define IDT_DESC_CNT 0X21
+#define PIC_M_CTRL 0X20
+#define PIC_M_DATA 0X21
+#define PIC_S_CTRL 0Xa0
+#define PIC_S_DATA 0Xa1
 
 /* interrupt gate descriptor structure*/
 struct gate_desc {
@@ -16,10 +20,32 @@ struct gate_desc {
 
 void idt_init();
 
+static void pic_init();
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function);
 static struct gate_desc idt[IDT_DESC_CNT];// IDT structure
 
 extern intr_handler intr_entry_table[IDT_DESC_CNT];
+
+/* init pic */
+static void pic_init()
+{
+	outb(PIC_M_CTRL, 0X11); // ICW1
+	outb(PIC_M_DATA, 0X20); // ICW2, start with 0x20 interrupt_code
+	outb(PIC_M_DATA, 0X04); // ICW3, IR2 link slave
+	outb(PIC_M_DATA, 0X01); // ICW4, normal EOI
+	
+	outb(PIC_S_CTRL, 0X11); // ICW1	
+	outb(PIC_S_DATA, 0X28); // ICW2, start with 0x28 interrupt_code
+	outb(PIC_S_DATA, 0X02); // ICW3, IR2 link master
+	outb(PIC_S_DATA, 0X01); // ICW4, normal EOI
+
+	/* mask IR1 - IR15, only use IR0 */
+	outb(PIC_M_DATA, 0Xfe);
+	outb(PIC_S_DATA, 0Xff);
+	
+	put_str("pic_init donn\n");
+}
+
 
 /* create interrupt descriptor */
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function)
@@ -34,7 +60,8 @@ static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler 
 /* init interrupt descriptor */
 static void idt_desc_init(void)
 {
-	for(int i = 0; i < IDT_DESC_CNT; i++)
+	int i = 0;
+	for(i = 0; i < IDT_DESC_CNT; i++)
 	{
 		make_idt_desc(&idt[i], IDT_DESC_ATTR_DPL0, intr_entry_table[i]);
 	}
@@ -48,7 +75,8 @@ void idt_init()
 	pic_init();// init 8259A
 	
 	/* load idt */
-	uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)idt << 16));
+	//uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)((uint32_t)idt << 16)));
+	uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)((uint32_t)idt) << 16));
 	asm volatile ("lidt %0" :: "m"(idt_operand));
 	put_str("idt_init done\n");
 }

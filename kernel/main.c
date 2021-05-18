@@ -1,10 +1,10 @@
 #include "print.h"
+#include "init.h"
 void main(void)
 {
-	put_str("I am ironman");
-	put_int(0);
-	put_char('\n');
-	put_int(0x123a);
+	put_str("I am in kernel!!!\n");
+	init_all();
+	asm volatile("sti");
 	while(1);
 	return;
 }
