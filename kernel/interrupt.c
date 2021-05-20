@@ -22,9 +22,13 @@ void idt_init();
 
 static void pic_init();
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function);
-static struct gate_desc idt[IDT_DESC_CNT];// IDT structure
+static void general_intr_handler(uint8_t vec_nr);
+static void exception_init();
 
-extern intr_handler intr_entry_table[IDT_DESC_CNT];
+char* intr_name[IDT_DESC_CNT]; // Hold the name of exception
+static struct gate_desc idt[IDT_DESC_CNT]; // IDT structure
+intr_handler idt_table[IDT_DESC_CNT]; // Entry of interrupt handler function 
+extern intr_handler intr_entry_table[IDT_DESC_CNT]; // Entry of interrupt function 
 
 /* init pic */
 static void pic_init()
@@ -43,9 +47,8 @@ static void pic_init()
 	outb(PIC_M_DATA, 0Xfe);
 	outb(PIC_S_DATA, 0Xff);
 	
-	put_str("pic_init donn\n");
+	put_str("pic_init done\n");
 }
-
 
 /* create interrupt descriptor */
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function)
@@ -68,14 +71,59 @@ static void idt_desc_init(void)
 	put_str(" idt_desc_init done\n");
 }
 
+/* general interrupt handler, normally for exception */
+static void general_intr_handler(uint8_t vec_nr)
+{
+	if(vec_nr == 0x27 || vec_nr == 0x2f) // IRQ7 and IRQ15 may generate spurious interrupt, 
+	{									 // can't be masked off, ignore it
+		return;
+	}
+	put_str("int vector : 0x");
+	put_int(vec_nr);
+	put_char('\n');
+	// interrupt handler to be extended here
+}
+/* register general exception handler and name 0-19 exceptions */
+static void exception_init()
+{
+	int i = 0;
+	for(i = 0; i < IDT_DESC_CNT; i ++)
+	{
+		idt_table[i] = general_intr_handler;
+		intr_name[i] = "unknown";
+	}
+	
+	/* name exception from 0 to 19*/
+	intr_name[0] = "#DE Divide Error";
+	intr_name[1] = "#DB Debug Exception";
+	intr_name[2] = "NMI Interrupt";
+	intr_name[3] = "#BP Breakpoint Exception";
+	intr_name[4] = "#OF Overflow Exception";
+	intr_name[5] = "#BR BOUND Range Exceeded Exception";
+	intr_name[6] = "#UD Invalid Opcode Exception";
+	intr_name[7] = "#NM Device Not Available Exception";
+	intr_name[8] = "#DF Double Fault Exception";
+	intr_name[9] = "#MF Coprocessor Segment Overrun";
+	intr_name[10] = "#TS Invalid TSS Exception";
+	intr_name[11] = "#NP Segment Not Present";
+	intr_name[12] = "#SS Stack Fault Exception";
+	intr_name[13] = "#GP General Protection Exception";
+	intr_name[14] = "#PF Page-Fault Exception";
+	//intr_name[15] reserved by INTEL
+	intr_name[16] = "#MF x87 FPU Floating-Point Error";
+	intr_name[17] = "#AC Alignment Check Exception";
+	intr_name[18] = "#MC Machine-Check Exception";
+	intr_name[19] = "#XF SIMD Floating-Point Exception";
+
+}
 void idt_init()
 {
 	put_str("idt_init start\n");
 	idt_desc_init();
+	exception_init();
 	pic_init();// init 8259A
 	
 	/* load idt */
-	//uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)((uint32_t)idt << 16)));
 	uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)((uint32_t)idt) << 16));
 	asm volatile ("lidt %0" :: "m"(idt_operand));
 	put_str("idt_init done\n");
