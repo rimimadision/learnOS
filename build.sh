@@ -3,12 +3,13 @@
 nasm -I include/ -o ./bin/mbr.bin ./boot/mbr.S
 nasm -I include/ -o ./bin/loader.bin ./boot/loader.S
 
+/usr/local/i386elfgcc/bin/i386-elf-gcc -I lib/kernel/ -I lib/ -I kernel/ -c -o build/timer.o device/timer.c
 /usr/local/i386elfgcc/bin/i386-elf-gcc -I lib/kernel/ -I lib/ -I kernel/ -c -o build/main.o kernel/main.c
 nasm -f elf -o build/print.o lib/kernel/print.S
 nasm -f elf -o build/kernel.o kernel/kernel.S
 /usr/local/i386elfgcc/bin/i386-elf-gcc -I lib/kernel/ -I lib/ -I kernel/ -c  -o build/interrupt.o kernel/interrupt.c
 /usr/local/i386elfgcc/bin/i386-elf-gcc -I lib/kernel/ -I lib/ -I kernel/ -c  -o build/init.o kernel/init.c
-/usr/local/i386elfgcc/bin/i386-elf-ld -Ttext 0xc0001500 -e main -o build/kernel.bin build/main.o build/init.o build/interrupt.o build/print.o build/kernel.o 
+/usr/local/i386elfgcc/bin/i386-elf-ld -Ttext 0xc0001500 -e main -o build/kernel.bin build/main.o build/init.o build/interrupt.o build/print.o build/kernel.o build/timer.o 
 objcopy --remove-section .eh_frame build/kernel.bin
 
 cd /usr/local/bochs/bin/
