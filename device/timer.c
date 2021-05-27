@@ -11,7 +11,7 @@
 #define READ_WRITE_LATCH 3
 #define PIT_CONTROL_PORT 0x43
 static void frequency_set(uint8_t counter_port, uint8_t counter_no, uint8_t rwl, uint8_t counter_mode, uint16_t counter_value);
-void timer_init();
+void timer_init(void);
 
 static void frequency_set(uint8_t counter_port,
 						  uint8_t counter_no,
@@ -26,7 +26,7 @@ static void frequency_set(uint8_t counter_port,
 	outb(counter_port, (uint8_t)counter_value);
 	outb(counter_port, (uint8_t)(counter_value >> 8));
 }
-void timer_init()
+void timer_init(void)
 {
 	put_str("timer_init start\n");
 	frequency_set(COUNTER0_PORT, COUNTER0_NO, READ_WRITE_LATCH, COUNTER_MODE, COUNTER0_VALUE);

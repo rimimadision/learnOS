@@ -1,13 +1,17 @@
-#include"interrupt.h"
-#include"stdint.h"
-#include"global.h"
-#include"io.h"
+#include "interrupt.h"
+#include "stdint.h"
+#include "global.h"
+#include "io.h"
+#include "print.h"
 
 #define IDT_DESC_CNT 0X21
 #define PIC_M_CTRL 0X20
 #define PIC_M_DATA 0X21
 #define PIC_S_CTRL 0Xa0
 #define PIC_S_DATA 0Xa1
+
+#define EFLAGS_IF 0x00000200
+#define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g"(EFLAG_VAR))
 
 /* interrupt gate descriptor structure*/
 struct gate_desc {
@@ -18,12 +22,17 @@ struct gate_desc {
 	uint16_t func_offset_high_word;
 };
 
-void idt_init();
+void idt_init(void);
 
-static void pic_init();
+static void pic_init(void);
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function);
 static void general_intr_handler(uint8_t vec_nr);
-static void exception_init();
+static void exception_init(void);
+
+enum intr_status intr_enable(void);
+enum intr_status intr_disable(void);
+enum intr_status intr_set_status(enum intr_status status);
+enum intr_status intr_get_status(void);
 
 char* intr_name[IDT_DESC_CNT]; // Hold the name of exception
 static struct gate_desc idt[IDT_DESC_CNT]; // IDT structure
@@ -31,7 +40,7 @@ intr_handler idt_table[IDT_DESC_CNT]; // Entry of interrupt handler function
 extern intr_handler intr_entry_table[IDT_DESC_CNT]; // Entry of interrupt function 
 
 /* init pic */
-static void pic_init()
+static void pic_init(void)
 {
 	outb(PIC_M_CTRL, 0X11); // ICW1
 	outb(PIC_M_DATA, 0X20); // ICW2, start with 0x20 interrupt_code
@@ -84,7 +93,7 @@ static void general_intr_handler(uint8_t vec_nr)
 	// interrupt handler to be extended here
 }
 /* register general exception handler and name 0-19 exceptions */
-static void exception_init()
+static void exception_init(void)
 {
 	int i = 0;
 	for(i = 0; i < IDT_DESC_CNT; i ++)
@@ -116,7 +125,7 @@ static void exception_init()
 	intr_name[19] = "#XF SIMD Floating-Point Exception";
 
 }
-void idt_init()
+void idt_init(void)
 {
 	put_str("idt_init start\n");
 	idt_desc_init();
@@ -128,3 +137,40 @@ void idt_init()
 	asm volatile ("lidt %0" :: "m"(idt_operand));
 	put_str("idt_init done\n");
 }
+
+/* set IF 1 to open interrupt, return IF before */
+enum intr_status intr_enable(void)
+{
+	enum intr_status old_status = intr_get_status();
+	if(old_status == INTR_OFF)
+	{
+		asm volatile("sti");
+	}
+	return old_status;
+}
+
+/* set IF 0 to close interrupt, return IF before */
+enum intr_status intr_disable(void)
+{
+	enum intr_status old_status = intr_get_status();
+	if(old_status == INTR_ON)
+	{
+		asm volatile("cli" : : : "memory");
+	}
+	return old_status;
+}	
+
+/* set IF, return IF before */
+enum intr_status intr_set_status(enum intr_status status)
+{
+	return (status & INTR_ON) ? intr_enable() : intr_disable();
+}
+
+/* get current IF */
+enum intr_status intr_get_status(void)
+{
+	uint32_t eflags = 0;
+	GET_EFLAGS(eflags);
+	return (eflags & eflags) ? INTR_ON : INTR_OFF;
+}
+
