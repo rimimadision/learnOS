@@ -23,6 +23,38 @@ struct vaddr_pool k_v_pool;
 static void mem_pool_init(uint32_t all_mem)
 {
 	put_str("mem_pool_init start\n");
+	/* we already set 256 page_table and use low 1MB mem */
+	uint32_t used_mem = PG_SIZE * 256 + 0x100000;
+	uint32_t free_mem = all_mem - used_mem;
+	uint16_t all_free_pages = free_mem / PG_SIZE;
+
+	/* allocate pages for kernel and user equally */
+	uint32_t kernel_free_pages = all_free_pages / 2;
+	uint32_t user_free_pages = all_free_pages - kernel_free_pages;
+	
+	uint32_t k_btmp_len = kernel_free_pages / 8;
+	uint32_t u_btmp_len = user_free_pages / 8;
+
+	uint32_t k_p_start = used_mem;
+	uint32_t u_p_start = used_mem + kernel_free_pages * PG_SIZE;
+	
+	/* initialize k_p_pool and u_p_pool */
+	k_p_pool.paddr_bitmap.btmp_bytes_len = k_btmp_len;
+	u_p_pool.paddr_bitmap.btmp_bytes_len = u_btmp_len;
+	
+	k_p_pool.paddr_bitmap.btmp_addr = (uint8_t*)MEM_BITMAP_BASE; 
+	u_p_pool.paddr_bitmap.btmp_addr = (uint8_t*)(MEM_BITMAP_BASE + k_btmp_len);
+ 
+	k_p_pool.paddr_start = k_p_start;
+	u_p_pool.paddr_start = u_p_start;
+
+	k_p_pool.paddr_pool_size = kernel_free_pages * PG_SIZE;
+	u_p_pool.paddr_pool_size = user_free_pages   * PG_SIZE;
+
+	put_str("physical memory pool info :\n	kernel_pool_bitmap_start: 0x");
+	put_int((int)k_p_pool.paddr_bitmap.btmp_addr);
+	put_str("\n	kernel_pool_phy_addr_start: 0x");
+	put_int((int)k_p_start);
 }
 
 void mem_init()
