@@ -1,12 +1,10 @@
 #include "string.h"
-#include "global.h"
-#include "string.h"
 
 /* set total "size" bytes "value" from "dst_"*/
 void memset(void* dst_, uint8_t value, uint32_t size)
 {
 	ASSERT(dst_ != NULL);
-	uint8_t dst_bytes = (uint8_t)dst_;
+	uint8_t* dst_bytes = (uint8_t*)dst_;
  	while(size--)
  	{
 		*dst_bytes++ = value;
@@ -17,8 +15,8 @@ void memset(void* dst_, uint8_t value, uint32_t size)
 void memcpy(void* dst_, const void* src_, uint32_t size)
 {
 	ASSERT(dst_ != NULL && src_ != NULL);
-	uint8_t dst_bytes = (uint8_t)dst_;
-	const uint8_t src_bytes = (const uint8_t)src_;
+	uint8_t* dst_bytes = (uint8_t*)dst_;
+	const uint8_t* src_bytes = (const uint8_t*)src_;
 
 	while(size--)
 	{   
@@ -37,12 +35,12 @@ int8_t memcmp(const void* a_, const void* b_, uint32_t size)
   	const char* b_bytes = b_;
 	while(size--)
 	{
-		if(*a != *b)
+		if(*a_bytes != *b_bytes)
 		{
-			return (*a > *b) ? 1 : -1;
+			return (*a_bytes > *b_bytes) ? 1 : -1;
 		}
-		a++;
-		b++;
+		a_bytes++;
+		b_bytes++;
 	}
 	return 0;
 }   
@@ -52,7 +50,7 @@ char* strcpy(char* dst_, const char* src_)
 {
 	ASSERT(dst_ != NULL && src_ != NULL);
 	char* tmp = dst_;
-	while(*dst_++ = *src_++);
+	while((*dst_++ = *src_++) != '\0');
 	return tmp;
 }
 
@@ -94,7 +92,7 @@ char* strchr(const char* str, const char ch)
 		str++;
 	}	
 	
-	return NULL:
+	return NULL;
 }
 
 /* find the 'ch' from back, return address of 'ch' */
@@ -106,7 +104,7 @@ char* strrchr(const char* str, const char ch)
 	{
 		if(*str == ch)
 		{
-			last_char = str;
+			last_char = (char*)str;
 		}
 		str++;
 	}
@@ -120,9 +118,9 @@ char* strcat(char* dst_, const char* src_)
 	char* p = dst_;
 	while(*p++);
 	p--;
-	while(*p++ = *src_++);
+	while((*p++ = *src_++) != '\0');
 	
-	return dst_
+	return dst_;
 }
 /* return times ch appears */
 uint32_t strchrs(const char* str, uint8_t ch)

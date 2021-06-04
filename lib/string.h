@@ -1,6 +1,9 @@
 #ifndef __LIB_STRING_H
 #define __LIB_STRING_H
 
+#include "global.h"
+#include "debug.h"
+
 /* function about manipulating memory */
 void memset(void* dst_, uint8_t value, uint32_t size);
 void memcpy(void* dst_, const void* src_, uint32_t size);

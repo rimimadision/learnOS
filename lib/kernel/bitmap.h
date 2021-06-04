@@ -8,7 +8,7 @@
 #include "interrupt.h"
 #include "debug.h"
 
-#define BITMAP_MASK 1b
+#define BITMAP_MASK 1
 
 struct bitmap
 {
@@ -17,8 +17,8 @@ struct bitmap
 };
 
 void bitmap_init(struct bitmap* btmp);
-bool bitmap_test_bit(struct bitmap btmp, uint32_t bit_idx);
-int bitmap_scan(struct bitmap btmp, uint32_t cnt);
+int bitmap_test_bit(struct bitmap* btmp, uint32_t bit_idx);
+int bitmap_scan(struct bitmap* btmp, uint32_t cnt);
 void bitmap_set(struct bitmap* btmp, uint32_t bit_idx, int8_t value);
 
 #endif //__LIB_KERNEL_BITMAP_H

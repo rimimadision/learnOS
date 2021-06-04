@@ -44,17 +44,32 @@ static void mem_pool_init(uint32_t all_mem)
 	
 	k_p_pool.paddr_bitmap.btmp_addr = (uint8_t*)MEM_BITMAP_BASE; 
 	u_p_pool.paddr_bitmap.btmp_addr = (uint8_t*)(MEM_BITMAP_BASE + k_btmp_len);
- 
+
+	bitmap_init(&k_p_pool.paddr_bitmap);
+	bitmap_init(&u_p_pool.paddr_bitmap);
+	
 	k_p_pool.paddr_start = k_p_start;
 	u_p_pool.paddr_start = u_p_start;
 
 	k_p_pool.paddr_pool_size = kernel_free_pages * PG_SIZE;
 	u_p_pool.paddr_pool_size = user_free_pages   * PG_SIZE;
 
-	put_str("physical memory pool info :\n	kernel_pool_bitmap_start: 0x");
+	put_str("physical memory pool info :\n    kernel_pool_bitmap_start: 0x");
 	put_int((int)k_p_pool.paddr_bitmap.btmp_addr);
-	put_str("\n	kernel_pool_phy_addr_start: 0x");
+	put_str("\n    kernel_pool_phy_addr_start: 0x");
 	put_int((int)k_p_start);
+	put_str("\n    user_pool_bitmap_start: 0x");
+	put_int((int)u_p_pool.paddr_bitmap.btmp_addr);
+	put_str("\n    user_pool_phy_addr_start: 0x");
+	put_int((int)u_p_start);
+	put_str("\n");
+
+	/* initialize k_v_pool */
+	k_v_pool.vaddr_bitmap.btmp_bytes_len = k_btmp_len;
+	k_v_pool.vaddr_bitmap.btmp_addr = (uint8_t*)(MEM_BITMAP_BASE + k_btmp_len + u_btmp_len);
+	bitmap_init(&k_v_pool.vaddr_bitmap);
+	k_v_pool.vaddr_start = K_HEAP_START;
+	put_str("mem pool init done\n");
 }
 
 void mem_init()
