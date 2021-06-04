@@ -32,8 +32,8 @@ $(BUILD_DIR)/timer.o : device/timer.c device/timer.h lib/stdint.h lib/kernel/pri
 					  lib/kernel/io.h
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/memory.o : kernel/memory.c lib/kernel/print.h \
-					  lib/stdint.h lib/kernel/bitmap.h
+$(BUILD_DIR)/memory.o : kernel/memory.c lib/kernel/print.h kernel/global.h \
+					  lib/stdint.h lib/kernel/bitmap.h kernel/debug.h lib/string.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/bitmap.o : lib/kernel/bitmap.c kernel/debug.h lib/kernel/print.h \

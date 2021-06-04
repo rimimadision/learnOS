@@ -1,5 +1,15 @@
 #include "memory.h"
 
+/*
+------------------------------------------------------------------
+process of malloc_page                                           |
+																 |
+1. |alloc_v_pages(allocate pages in virtual mem)  | -->			 |
+2. |palloc(allocate physical pages)               | -->			 |
+3. |page_table_add(map physical pages to virtual pages)|	     |
+------------------------------------------------------------------
+*/
+
 #define PG_SIZE (1 << 12)
 
 /* bitmap address : 0xc009a000 
@@ -10,6 +20,9 @@
    set kernel heap start from 0xc0100000 */
 #define K_HEAP_START 0xc0100000
 
+#define PDE_IDX(addr) (((uint32_t)addr & 0xffc00000) >> 22)
+#define PTE_IDX(addr) (((uint32_t)addr & 0x003ff000) >> 12)
+
 struct paddr_pool
 {
 	struct bitmap paddr_bitmap;
@@ -19,6 +32,13 @@ struct paddr_pool
 
 struct paddr_pool k_p_pool, u_p_pool;
 struct vaddr_pool k_v_pool;
+
+/* local function */
+static void mem_pool_init(uint32_t all_mem);
+static void* alloc_v_pages(enum pool_flags pf, uint32_t pg_cnt);
+static void* palloc(struct vaddr_pool pool);
+
+/* global funtion declarations are in kernel/memory.h */
 
 static void mem_pool_init(uint32_t all_mem)
 {
