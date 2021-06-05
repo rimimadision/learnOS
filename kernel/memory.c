@@ -36,7 +36,8 @@ struct vaddr_pool k_v_pool;
 /* local function */
 static void mem_pool_init(uint32_t all_mem);
 static void* alloc_v_pages(enum pool_flags pf, uint32_t pg_cnt);
-static void* palloc(struct vaddr_pool pool);
+static void* palloc(struct paddr_pool* ptr_p_pool);
+static void page_table_add(void* _vaddr, void* _page_phyaddr);
 
 /* global funtion declarations are in kernel/memory.h */
 
@@ -98,4 +99,103 @@ void mem_init()
 	uint32_t mem_bytes_total = (*(uint32_t*) 0xb00);
 	mem_pool_init(mem_bytes_total);
 	put_str("mem_init done\n");
+}
+
+/* return the start address if sucess, or else return NULL */
+static void* alloc_v_pages(enum pool_flags pf, uint32_t pg_cnt)
+{
+	if(pf == PF_KERNEL)
+	{
+		uint32_t bit_idx_start = bitmap_scan(&k_v_pool.vaddr_bitmap, pg_cnt);
+		ASSERT(bit_idx_start != -1);
+		if(bit_idx_start == -1)
+		{
+			return NULL:
+		}
+		void* alloc_vaddr_start = (void*)(k_v_pool.vaddr_start + bit_idx_start * PG_SIZE);
+		uint32_t bit_idx = bit_idx_start;
+		while(pg_cnt--)
+		{
+			bitmap_set(&k_v_pool.vaddr_bitmap, bit_idx++, 1);
+		}
+	}else // pf == PF_USER
+	{
+		// DO USER VIRTUAL MEMORY ALLOC
+	}
+	
+	return alloc_vaddr_start;
+}
+
+/* return page table entry(4 bytes) of vaddr */
+inline uint32_t* pte_ptr(void* vaddr)
+{
+	return (uint32_t*)(0xffc00000 + ((vaddr & 0xffc00000) >> 10) + PTE_IDX(vaddr) * 4);
+}
+
+/* return page directory entry(4 bytes) of vaddr */
+inline uint32_t* pde_ptr(void* vaddr)
+{
+	return (uint32_t*)(0xfffff000 + PDE_IDX(vaddr) * 4);
+}
+
+/* alloc physical page, return physical address if sucess, or else return NULL
+   can only alloc one page once for physical address can be not continuous          
+*/
+static void* palloc(struct paddr_pool* ptr_p_pool)
+{
+	uint32_t bit_idx_start = bitmap_scan(&ptr_p_pool->paddr_bitmap, 1);
+	if(bit_idx_start == -1)
+	{
+		return NULL;
+	}
+	bitmap_set(&ptr_p_pool->paddr_bitmap, 1);
+
+	return (void*)(ptr_p_pool->paddr_start + bit_idx_start * PG_SIZE);
+}
+
+/* mapping _vaddr to _page_phyaddr */
+static void page_table_add(void* _vaddr, void* _page_phyaddr)
+{
+
+
+}
+
+void* malloc_page(enum pool_flags pf, uint32_t pg_cnt)
+{
+	ASSERT(pg_cnt > 0 && pg_cnt < 3840); // 3840 = 15MB / 4kb
+										 //limit the space alloced smaller than 15MB 
+	/* alloc virtual memory */
+	void* alloc_vaddr_start = alloc_v_pages(pf, pg_cnt);
+	if(alloc_vaddr_start == NULL)
+	{
+		return NULL;
+	}
+
+	uint32_t vaddr = (uint32_t)alloc_vaddr_start;
+	uint32_t cnt = pg_cnt;
+	struct paddr_pool* p_pool = (pf == PF_KERNEL) ? &k_p_pool : &u_p_pool;
+	 
+	while(cnt--)
+	{
+		void* page_phyaddr = palloc(p_pool);
+		if(page_phyaddr == NULL)
+		{
+			// DO MEMORY_COLLECT
+			return NULL:
+		}	
+		page_table_add((void*)vaddr, page_phyaddr);
+		vaddr += PG_SIZE;
+	}
+
+	return alloc_vaddr_start;
+}
+
+void* get_kernel_pages(uint32_t pg_cnt)
+{
+	void* vaddr_start = malloc_page(PF_KERNEL, pg_cnt);
+	if(vaddr_start != NULL)
+	{
+		memset(vaddr, 0, pg_cnt * PG_SIZE);
+	}
+	return vaddr_start;
 }

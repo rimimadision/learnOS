@@ -8,8 +8,6 @@
 #include "debug.h"
 #include "string.h"
 
-
-
 #define PG_P_1 1
 #define PG_P_0 0
 #define PG_RW_R 0
@@ -34,4 +32,7 @@ extern struct paddr_pool k_p_pool, u_p_pool;
 void mem_init(void);
 uint32_t* pte_ptr(void* vaddr);
 uint32_t* pde_ptr(void* vaddr);
+void* malloc_page(enum pool_flags pf, uint32_t pg_cnt);
+void* get_kernel_pages(uint32_t pg_cnt);
+
 #endif // __KERNEL_MEMORY_H
