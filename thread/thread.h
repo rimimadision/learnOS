@@ -3,6 +3,99 @@
 
 #include "stdint.h"
 
+typedef void thread_func(void*); // universal function type
+
+enum task_status
+{
+	TASK_RUNNING,
+	TASK_READY,
+	TASK_BLOCKED,
+	TASK_WAITING,
+	TASK_HANGING,
+	TASK_DIED
+}
+
+/* stack for saving context when interrupt occur */
+struct intr_stack
+{ 
+	uint32_t vec_no;
+
+	/* pushad */
+	uint32_t edi;
+	uint32_t esi;
+	uint32_t ebp;
+	uint32_t esp_dummy; // esp is pushed when running pushad,
+						// popad will ignore it
+	uint32_t ebx;
+	uint32_t edx;
+	uint32_t ecx;
+	uint32_t eax;
+
+	/* sreg */
+	uint32_t gs;
+	uint32_t fs;
+	uint32_t es;
+	uint32_t ds;
+
+	/* CPU push automatically */
+	uint32_t err_code; // err_code = 0 if CPU don't push err_code
+	void (*eip)(void); // the return address
+	uint32_t cs;
+	uint32_t eflags;
+	void* esp; // push esp and ss when privilege level gets higher
+	uint32_t ss;
+};
+
+/* stack for thread information */
+struct thread_stack
+{
+	/* When use C program call ASM function,
+	 * need to protect ebp, ebx, edi, esi and esp,
+	 * for esp won't change after 'ret' from ASM function,
+	 * only need to protect other four registers.
+	 */
+	uint32_t ebp;	
+	uint32_t ebx;
+	uint32_t edi;
+	uint32_t esi;
+
+	/* When thread runs at its first time,
+	 * "eip"(not current eip reg) points to kernel_thread to 
+	 * start the thread_func; in the other time, "eip" points
+	 * to switch_to function's return address(or called next_thread
+	 * function address)
+	 */
+	void (*eip)(thread_func* func, void* func_arg);
+
+	/* var below will be used only when thread is scheduled at its first time */
+	void (*unused_retaddr); // placeholder used in kernel_thread, will not be used
+	thread_func* function; // main function for this thread
+	void* func_arg; // arguments for "function" above
+};
+
+/* Process Control Block, size = 1 page 
+   ------------------------
+   |	    Stack         |
+   ------------------------ 
+   | 0x19700505(magic num)|
+   ------------------------  
+   |        name          |
+   ------------------------
+   |        priority      |   
+   ------------------------
+   |        status        |   
+   ------------------------
+   |        esp           |   
+   ------------------------
+*/
+struct task_struct
+{
+	uint32_t* self_kstack; // every kernel_thread will have its own kernel_stack with privilege_level = 0
+	enum task_status status;
+	uint8_t priority;
+	char name[16];
+	uint32_t stack_magic;
+};
 
 
 #endif // __THREAD_THREAD_H
