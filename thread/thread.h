@@ -13,7 +13,7 @@ enum task_status
 	TASK_WAITING,
 	TASK_HANGING,
 	TASK_DIED
-}
+};
 
 /* stack for saving context when interrupt occur */
 struct intr_stack
@@ -94,8 +94,8 @@ struct task_struct
 	enum task_status status;
 	uint8_t priority;
 	char name[16];
-	uint32_t stack_magic;
+	uint32_t stack_magic; // 0x19700505
 };
 
-
+struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg);
 #endif // __THREAD_THREAD_H
