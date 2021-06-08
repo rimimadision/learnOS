@@ -3,6 +3,7 @@
 #include "stdint.h"
 
 #define NULL 0
+typedef enum{false, true} bool;
 
 #define RPL0 0 
 #define RPL1 1 

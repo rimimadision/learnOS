@@ -7,11 +7,11 @@ inline void bitmap_init(struct bitmap* btmp)
 }
 
 /* test bit on bit_idx 0 or 1*/
-inline int bitmap_test_bit(struct bitmap* btmp, uint32_t bit_idx)
+inline bool bitmap_test_bit(struct bitmap* btmp, uint32_t bit_idx)
 {
 	uint32_t byte_idx = bit_idx / 8;
 	uint32_t bit_odd = bit_idx % 8;
-	return (btmp->btmp_addr[byte_idx] & (BITMAP_MASK << bit_odd)) ? 1 : 0;
+	return (btmp->btmp_addr[byte_idx] & (BITMAP_MASK << bit_odd)) ? true : false;
 }
 
 /* find continous 'cnt' empty pages */

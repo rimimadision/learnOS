@@ -8,9 +8,9 @@
 
 
 static void kernel_thread(thread_func* function, void* func_arg);
-void thread_create(struct task_struct* pthread, thread_func function, void* func_arg);
+
+void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
-struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg);
 
 /* execute the thread_func through this function */
 static void kernel_thread(thread_func* function, void* func_arg)
@@ -19,7 +19,7 @@ static void kernel_thread(thread_func* function, void* func_arg)
 }
 
 /* initialize thread_stack */
-void thread_create(struct task_struct* pthread, thread_func function, void* func_arg)
+void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg)
 {
 	/* reserve space for intr_stack */
 	pthread->self_kstack -= sizeof(struct intr_stack);
@@ -48,7 +48,7 @@ void init_thread(struct task_struct* pthread, char* name, int prio)
 }
 
 /* API to start a new thread */
-struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg)
+struct task_struct* thread_start(char* name, int prio, thread_func* function, void* func_arg)
 {
 	struct task_struct* thread = get_kernel_pages(1); // PCB starts from the bottom of page
 	

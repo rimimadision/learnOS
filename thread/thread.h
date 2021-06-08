@@ -97,5 +97,5 @@ struct task_struct
 	uint32_t stack_magic; // 0x19700505
 };
 
-struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg);
+struct task_struct* thread_start(char* name, int prio, thread_func* function, void* func_arg);
 #endif // __THREAD_THREAD_H
