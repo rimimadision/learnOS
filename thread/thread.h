@@ -2,6 +2,7 @@
 #define __THREAD_THREAD_H
 
 #include "stdint.h"
+#include "list.h"
 
 typedef void thread_func(void*); // universal function type
 
@@ -73,29 +74,27 @@ struct thread_stack
 	void* func_arg; // arguments for "function" above
 };
 
-/* Process Control Block, size = 1 page 
-   ------------------------
-   |	    Stack         |
-   ------------------------ 
-   | 0x19700505(magic num)|
-   ------------------------  
-   |        name          |
-   ------------------------
-   |        priority      |   
-   ------------------------
-   |        status        |   
-   ------------------------
-   |        esp           |   
-   ------------------------
-*/
+/* Process Control Block, size = 1 page */
 struct task_struct
 {
-	uint32_t* self_kstack; // every kernel_thread will have its own kernel_stack with privilege_level = 0
+	uint32_t* self_kstack; // every kernel_thread will have its own kernel_stack 
+						   // with privilege_level = 0
 	enum task_status status;
-	uint8_t priority;
 	char name[16];
+	uint8_t priority;
+	
+	uint8_t ticks;
+	uint32_t elapsed_ticks;
+	
+	struct list_elem general_tag; // used in thread_ready_list 	
+	struct list_elem all_list_tag; // used in thread_all_list
+	
+	uint32_t* pgdir; // vaddr of task's page_table(if task is a process, it wiil have its own 
+					 // virtual space, if task is a thread, then set pgdir = NULL)
 	uint32_t stack_magic; // 0x19700505
 };
 
 struct task_struct* thread_start(char* name, int prio, thread_func* function, void* func_arg);
+struct task_struct* get_cur_thread_pcb();
+
 #endif // __THREAD_THREAD_H

@@ -3,18 +3,39 @@
 #include "string.h"
 #include "global.h"
 #include "memory.h"
+#include "list.h"
 
 #define PG_SIZE 4096
 
+struct task_struct* main_thread;
+struct list thread_ready_list;
+struct list thread_all_list;
+static struct list_elem* thread_tag; // used in converting tag in list to PCB
+
+extern void switch_to(struct task_struct* cur, struct task_struct* next);
 
 static void kernel_thread(thread_func* function, void* func_arg);
+static void make_main_thread(void);
 
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
 
+/* get current thread PCB */
+struct task_struct* get_cur_thread_pcb()
+{	
+	/* for kernel_stack of thread is in the same page of PCB
+	   and PCB is set at the bottom of page
+	   so addr of PCB is esp & 0xfffff000 
+	*/
+	uint32_t esp;
+	asm volatile("movl %%esp, %0" : "=g"(esp));
+	return (struct task_struct*)(esp & 0xfffff000);
+}
+
 /* execute the thread_func through this function */
 static void kernel_thread(thread_func* function, void* func_arg)
 {
+	intr_enable();
 	function(func_arg);
 }
 
@@ -41,8 +62,19 @@ void init_thread(struct task_struct* pthread, char* name, int prio)
 {
 	memset(pthread, 0, sizeof(*pthread));
 	strcpy(pthread->name, name);
-	pthread->status = TASK_RUNNING;
+
+	if(pthread == main_thread)
+	{
+		pthread->status = TASK_RUNNING;
+	}else
+	{
+		pthread->status = TASK_READY;
+	}
+
 	pthread->priority = prio;
+	pthread->ticks = prio;
+	pthread->elapsed_ticks = 0;
+	pthread->pgdir = NULL;
 	pthread->self_kstack = (uint32_t*)((uint32_t)pthread + PG_SIZE);
 	pthread->stack_magic = 0x19700505;
 }
@@ -55,14 +87,21 @@ struct task_struct* thread_start(char* name, int prio, thread_func* function, vo
 	init_thread(thread, name, prio);
 	thread_create(thread, function, func_arg);
 
-	asm volatile ("movl %0, %%esp;\
-					pop %%ebp;\
-					pop %%ebx;\
-					pop %%edi;\
-					pop %%esi;\
-					ret"\
-					: : "g"(thread->self_kstack) : "memory");
-	
-	return thread; // will not be excuted
+	ASSERT(!elem_find(&thread_ready_list, &thread->general_tag));
+	list_append(&thread_ready_list, &thread->general_tag);
+
+	ASSERT(!elem_find(&thread_all_list, &thread->all_list_tag));
+	list_append(&thread_all_list, &thread->all_list_tag);
+
+	return thread;
 }
 
+static void make_main_thread(void)
+{
+	/* already leaving 0xc009e000 ~ 0xc009efff as PCB */
+	main_thread = get_cur_thread_pcb();
+	init_thread(main_thread, "main", 31);
+	
+	ASSERT(!elem_find(&thread_all_list, &main_thread->all_list_tag));
+	list_append(&thread_all_list, &main_thread->all_list_tag);
+}
