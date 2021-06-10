@@ -28,6 +28,7 @@ static void pic_init(void);
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function);
 static void general_intr_handler(uint8_t vec_nr);
 static void exception_init(void);
+static void set_cursor(uint32_t pos);
 
 enum intr_status intr_enable(void);
 enum intr_status intr_disable(void);
@@ -174,3 +175,12 @@ enum intr_status intr_get_status(void)
 	return (eflags & eflags) ? INTR_ON : INTR_OFF;
 }
 
+/* set cursor to position 'pos' */
+static void set_cursor(uint32_t pos)
+{
+	asm volatile("movl 0x03d4, dx"
+
+
+				 : : "b"(pos));
+
+}
