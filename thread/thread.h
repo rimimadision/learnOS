@@ -95,6 +95,6 @@ struct task_struct
 };
 
 struct task_struct* thread_start(char* name, int prio, thread_func* function, void* func_arg);
-struct task_struct* get_cur_thread_pcb();
+struct task_struct* get_cur_thread_pcb(void);
 
 #endif // __THREAD_THREAD_H

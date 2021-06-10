@@ -13,7 +13,7 @@ void list_init(struct list* plist)
 /* add pelem before pbefore */
 void list_insert_before(struct list_elem* pbefore, struct list_elem* pelem)
 {
-	enum intr_staus old_status = intr_disable();
+	enum intr_status old_status = intr_disable();
 	
 	pbefore->prev->next = pelem;	
 
@@ -34,7 +34,7 @@ void list_push(struct list* plist, struct list_elem* pelem)
 /* add pelem as the last elem in the list */
 void list_append(struct list* plist, struct list_elem* pelem)
 {
-	list_insert_before(&plist->tail, elem);
+	list_insert_before(&plist->tail, pelem);
 }
 
 /* remove pelem from list */

@@ -32,3 +32,5 @@ bool list_empty(struct list* plist);
 uint32_t list_len(struct list* plist);
 struct list_elem* list_traversal(struct list* plist, list_traversal_func* func, int arg);
 bool elem_find(struct list* plist, struct list_elem* obj_elem);
+
+#endif // __LIB_KERNEL_LIST_H

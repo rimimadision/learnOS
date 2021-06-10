@@ -21,7 +21,7 @@ void thread_create(struct task_struct* pthread, thread_func* function, void* fun
 void init_thread(struct task_struct* pthread, char* name, int prio);
 
 /* get current thread PCB */
-struct task_struct* get_cur_thread_pcb()
+struct task_struct* get_cur_thread_pcb(void)
 {	
 	/* for kernel_stack of thread is in the same page of PCB
 	   and PCB is set at the bottom of page
