@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "interrupt.h"
 #include "stdint.h"
 #include "global.h"
@@ -13,7 +14,7 @@
 #define EFLAGS_IF 0x00000200
 #define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g"(EFLAG_VAR))
 
-/* interrupt gate descriptor structure*/
+/* interrupt gate descriptor structure */
 struct gate_desc {
 	uint16_t func_offset_low_word;	
 	uint16_t selector;
@@ -23,6 +24,7 @@ struct gate_desc {
 };
 
 void idt_init(void);
+void register_handler(uint8_t vec_no, intr_handler function);
 
 static void pic_init(void);
 static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler function);
@@ -88,10 +90,19 @@ static void general_intr_handler(uint8_t vec_nr)
 	{									 // can't be masked off, ignore it
 		return;
 	}
-	put_str("int vector : 0x");
-	put_int(vec_nr);
-	put_char('\n');
-	// interrupt handler to be extended here
+	set_cursor(0);
+	put_str("------------ exception -------------\n");
+	set_cursor(88);
+	put_str(intr_name[vec_nr]);
+	if(vec_nr == 14)
+	{
+		int page_fault_vaddr = 0;
+		asm volatile("movl %%cr2, %0" : "=r"(page_fault_vaddr));
+		put_str("\npage fault address is ");
+		put_int(page_fault_vaddr);
+	}
+	put_str("\n------------------------------------");
+	while(1); // hanging here
 }
 /* register general exception handler and name 0-19 exceptions */
 static void exception_init(void)
@@ -182,4 +193,8 @@ static void set_cursor(uint16_t pos)
 	outb(0x03d5, (uint8_t)((pos & 0xff00) >> 8));
 	outb(0x03d4, 0x0f);
 	outb(0x03d5, (uint8_t)(pos & 0xff));
+}
+void register_handler(uint8_t vec_no, intr_handler function)
+{
+	idt_table[vec_no] = function;
 }

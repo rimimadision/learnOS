@@ -6,11 +6,13 @@
 #include "list.h"
 
 #define PG_SIZE 4096
+#define offset(struct_type, member) (int)(&((struct_type*)0)->member)
+#define elem2entry(struct_type, member, elem_ptr)\
+		(struct_type*)((int)elem_ptr - offset(struct_type, member))
 
 struct task_struct* main_thread;
 struct list thread_ready_list;
 struct list thread_all_list;
-static struct list_elem* thread_tag; // used in converting tag in list to PCB
 
 extern void switch_to(struct task_struct* cur, struct task_struct* next);
 
@@ -104,4 +106,36 @@ static void make_main_thread(void)
 	
 	ASSERT(!elem_find(&thread_all_list, &main_thread->all_list_tag));
 	list_append(&thread_all_list, &main_thread->all_list_tag);
+}
+
+void schedule(void)
+{
+	ASSERT(intr_get_status() == INTR_OFF);
+	
+	struct task_struct* cur = get_cur_thread_pcb();
+	if(cur->status == TASK_RUNNING)
+	{
+		ASSERT(!elem_find(&thread_ready_list, &cur->general_tag));
+		list_append(&thread_ready_list, &cur->general_tag);
+		cur->ticks = cur->priority;
+		cur->status = TASK_READY;
+	}else
+	{
+		//todo
+	}
+	
+	ASSERT(!list_empty(&thread_ready_list));
+	struct list_elem* next_tag = list_pop(&thread_ready_list);
+	struct task_struct* next = elem2entry(struct task_struct, general_tag, next_tag);
+	next->status = TASK_RUNNING;
+	switch_to(cur, next);
+}
+
+void thread_init(void)
+{
+	put_str("thread_init start\n");
+	list_init(&thread_ready_list);
+	list_init(&thread_all_list);
+	make_main_thread();
+	put_str("thread_init done\n");
 }
