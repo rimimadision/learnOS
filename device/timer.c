@@ -41,7 +41,7 @@ void timer_init(void)
 	put_str("timer_init start\n");
 	frequency_set(COUNTER0_PORT, COUNTER0_NO, READ_WRITE_LATCH, COUNTER_MODE, COUNTER0_VALUE);
 	register_handler(0x20, intr_timer_handler);
-	put_str("timer_iniit done\n");
+	put_str("timer_init done\n");
 
 }
 
@@ -49,7 +49,6 @@ static void intr_timer_handler(void)
 {
 	struct task_struct* cur_thread = get_cur_thread_pcb();
 	ASSERT(cur_thread->stack_magic == 0x19700505);	
-	put_str("????\n");
 	cur_thread->elapsed_ticks++;
 	total_ticks++;
 	if(cur_thread->ticks == 0)

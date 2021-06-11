@@ -183,7 +183,7 @@ enum intr_status intr_get_status(void)
 {
 	uint32_t eflags = 0;
 	GET_EFLAGS(eflags);
-	return (eflags & eflags) ? INTR_ON : INTR_OFF;
+	return (EFLAGS_IF & eflags) ? INTR_ON : INTR_OFF;
 }
 
 /* set cursor to position 'pos' */
