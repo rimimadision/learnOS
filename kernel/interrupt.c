@@ -91,7 +91,9 @@ static void general_intr_handler(uint8_t vec_nr)
 		return;
 	}
 	set_cursor(0);
-	put_str("------------ exception -------------\n");
+	put_str("--------------------- exception -------------------\n");
+	put_str("                                                   ");
+
 	set_cursor(88);
 	put_str(intr_name[vec_nr]);
 	if(vec_nr == 14)
@@ -101,7 +103,7 @@ static void general_intr_handler(uint8_t vec_nr)
 		put_str("\npage fault address is ");
 		put_int(page_fault_vaddr);
 	}
-	put_str("\n------------------------------------");
+	put_str("\n--------------------------------------------------\n");
 	while(1); // hanging here
 }
 /* register general exception handler and name 0-19 exceptions */

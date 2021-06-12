@@ -21,6 +21,8 @@ static void make_main_thread(void);
 
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
+void thread_block(enum status stat);
+void thread_unblock(struct task_struct* pthread);
 
 /* get current thread PCB */
 struct task_struct* get_cur_thread_pcb(void)
@@ -121,7 +123,8 @@ void schedule(void)
 		cur->status = TASK_READY;
 	}else
 	{
-		//todo
+		//if status is not TASK_RUNNING, means that the thread may be blocked for 
+		// some reason, then we won't append it into thread_ready_list
 	}
 	
 	ASSERT(!list_empty(&thread_ready_list));
@@ -139,3 +142,36 @@ void thread_init(void)
 	make_main_thread();
 	put_str("thread_init done\n");
 }
+
+/* block cur_thread and set status 'stat' */
+void thread_block(enum status stat)
+{
+	ASSERT((stat == TASK_BLOCKED) || (stat == TASK_WAITING) || (stat == TASK_HANGING));
+	enum intr_staus old_status = intr_disable();
+	struct task_struct* cur_thread = get_cur_thread_pcb();
+	cur_thread->status = stat;
+	schedule();
+	intr_set_status(old_status);
+}
+
+/* unblock pthread and */
+void thread_unblock(struct task_struct* pthread)
+{
+	enum intr_staus old_status = intr_disable();
+	ASSERT((pthread->staus == TASK_BLOCKED) || (pthread->status == TASK_WAITING) \
+	       || (pthread->status == TASK_HANGING));
+	if(pthread->staus != TASK_READY)
+	{
+		ASSERT(!elem_find(&thread_ready_list, &pthread->general_tag));
+		if(elem_find(&thread_ready_list, &pthread->general_tag))
+		{
+			PANIC("thread_unblock:blocked thread in ready_list\n");
+		}	
+		list_push(&thread_ready_list, &pthread->general_tag);
+		pthread->status = TASK_READY;
+	}
+
+	intr_set_status(old_status);
+}
+
+
