@@ -15,7 +15,8 @@
 #define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g"(EFLAG_VAR))
 
 /* interrupt gate descriptor structure */
-struct gate_desc {
+struct gate_desc 
+{
 	uint16_t func_offset_low_word;	
 	uint16_t selector;
 	uint8_t dcount; // fixed value = 0 for IDT
@@ -177,7 +178,7 @@ enum intr_status intr_disable(void)
 /* set IF, return IF before */
 enum intr_status intr_set_status(enum intr_status status)
 {
-	return (status & INTR_ON) ? intr_enable() : intr_disable();
+	return (status == INTR_ON) ? intr_enable() : intr_disable();
 }
 
 /* get current IF */

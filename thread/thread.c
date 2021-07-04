@@ -4,11 +4,9 @@
 #include "global.h"
 #include "memory.h"
 #include "list.h"
+#include "interrupt.h"
 
 #define PG_SIZE 4096
-#define offset(struct_type, member) (int)(&((struct_type*)0)->member)
-#define elem2entry(struct_type, member, elem_ptr)\
-		(struct_type*)((int)elem_ptr - offset(struct_type, member))
 
 struct task_struct* main_thread;
 struct list thread_ready_list;
@@ -21,7 +19,7 @@ static void make_main_thread(void);
 
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
-void thread_block(enum status stat);
+void thread_block(enum task_status stat);
 void thread_unblock(struct task_struct* pthread);
 
 /* get current thread PCB */
@@ -144,23 +142,23 @@ void thread_init(void)
 }
 
 /* block cur_thread and set status 'stat' */
-void thread_block(enum status stat)
+void thread_block(enum task_status stat)
 {
 	ASSERT((stat == TASK_BLOCKED) || (stat == TASK_WAITING) || (stat == TASK_HANGING));
-	enum intr_staus old_status = intr_disable();
+	enum intr_status old_status = intr_disable();
 	struct task_struct* cur_thread = get_cur_thread_pcb();
 	cur_thread->status = stat;
 	schedule();
 	intr_set_status(old_status);
 }
 
-/* unblock pthread and */
+/* unblock pthread */
 void thread_unblock(struct task_struct* pthread)
 {
-	enum intr_staus old_status = intr_disable();
-	ASSERT((pthread->staus == TASK_BLOCKED) || (pthread->status == TASK_WAITING) \
+	enum intr_status old_status = intr_disable();
+	ASSERT((pthread->status == TASK_BLOCKED) || (pthread->status == TASK_WAITING) \
 	       || (pthread->status == TASK_HANGING));
-	if(pthread->staus != TASK_READY)
+	if(pthread->status != TASK_READY)
 	{
 		ASSERT(!elem_find(&thread_ready_list, &pthread->general_tag));
 		if(elem_find(&thread_ready_list, &pthread->general_tag))
@@ -173,5 +171,3 @@ void thread_unblock(struct task_struct* pthread)
 
 	intr_set_status(old_status);
 }
-
-

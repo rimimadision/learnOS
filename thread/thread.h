@@ -4,6 +4,10 @@
 #include "stdint.h"
 #include "list.h"
 
+#define offset(struct_type, member) (int)(&((struct_type*)0)->member)
+#define elem2entry(struct_type, member, elem_ptr)\
+		(struct_type*)((int)elem_ptr - offset(struct_type, member))
+
 typedef void thread_func(void*); // universal function type
 
 enum task_status
@@ -98,5 +102,6 @@ struct task_struct* thread_start(char* name, int prio, thread_func* function, vo
 struct task_struct* get_cur_thread_pcb(void);
 void schedule(void);
 void thread_init(void);
-
+void thread_block(enum task_status stat);
+void thread_unblock(struct task_struct* pthread);
 #endif // __THREAD_THREAD_H
