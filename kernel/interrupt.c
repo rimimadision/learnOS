@@ -5,7 +5,7 @@
 #include "io.h"
 #include "print.h"
 
-#define IDT_DESC_CNT 0X21
+#define IDT_DESC_CNT 0X30
 #define PIC_M_CTRL 0X20
 #define PIC_M_DATA 0X21
 #define PIC_S_CTRL 0Xa0
@@ -57,7 +57,7 @@ static void pic_init(void)
 	outb(PIC_S_DATA, 0X01); // ICW4, normal EOI
 
 	/* mask IR1 - IR15, only use IR0 */
-	outb(PIC_M_DATA, 0Xfe);
+	outb(PIC_M_DATA, 0Xfd);
 	outb(PIC_S_DATA, 0Xff);
 	
 	put_str("pic_init done\n");
