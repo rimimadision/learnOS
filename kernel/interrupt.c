@@ -57,7 +57,7 @@ static void pic_init(void)
 	outb(PIC_S_DATA, 0X01); // ICW4, normal EOI
 
 	/* mask IR1 - IR15, only use IR0 */
-	outb(PIC_M_DATA, 0Xfd);
+	outb(PIC_M_DATA, 0Xfc);
 	outb(PIC_S_DATA, 0Xff);
 	
 	put_str("pic_init done\n");
