@@ -14,8 +14,8 @@ int main(void){
 	
 	init_all();
 
-	thread_start("consumer_a", 31, k_thread_a, " A_");
-	thread_start("consumer_b", 31, k_thread_b, " B_");
+	//thread_start("consumer_a", 31, k_thread_a, " A_");
+	//thread_start("consumer_b", 31, k_thread_b, " B_");
 	intr_enable();
 		
 	while(1);
