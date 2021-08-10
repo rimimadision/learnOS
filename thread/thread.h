@@ -3,6 +3,8 @@
 
 #include "stdint.h"
 #include "list.h"
+#include "bitmap.h"
+#include "memory.h"
 
 #define offset(struct_type, member) (int)(&((struct_type*)0)->member)
 #define elem2entry(struct_type, member, elem_ptr)\
@@ -95,6 +97,7 @@ struct task_struct
 	
 	uint32_t* pgdir; // vaddr of task's page_table(if task is a process, it wiil have its own 
 					 // virtual space, if task is a thread, then set pgdir = NULL)
+	struct vaddr_pool userprog_vaddr; 
 	uint32_t stack_magic; // 0x19700505
 };
 

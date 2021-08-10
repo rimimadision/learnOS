@@ -6,8 +6,6 @@
 #include "list.h"
 #include "interrupt.h"
 
-#define PG_SIZE 4096
-
 struct task_struct* main_thread;
 struct list thread_ready_list;
 struct list thread_all_list;

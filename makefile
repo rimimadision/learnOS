@@ -66,7 +66,8 @@ $(BUILD_DIR)/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/kernel.S
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/memory.o : kernel/memory.c kernel/memory.h lib/kernel/print.h kernel/global.h \
-					  lib/stdint.h lib/kernel/bitmap.h kernel/debug.h lib/string.h
+					  lib/stdint.h lib/kernel/bitmap.h kernel/debug.h lib/string.h thread/sync.h\
+					  thread/thread.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/bitmap.o : lib/kernel/bitmap.c kernel/debug.h lib/kernel/print.h \

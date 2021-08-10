@@ -5,8 +5,6 @@
 #include "print.h"
 #include "string.h"
 
-#define PG_SIZE (1 << 12)
-
 struct tss {
 	uint32_t backlink;
 	uint32_t* esp0;
