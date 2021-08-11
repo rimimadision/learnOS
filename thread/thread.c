@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "list.h"
 #include "interrupt.h"
+#include "process.h"
 
 struct task_struct* main_thread;
 struct list thread_ready_list;
@@ -127,6 +128,9 @@ void schedule(void)
 	struct list_elem* next_tag = list_pop(&thread_ready_list);
 	struct task_struct* next = elem2entry(struct task_struct, general_tag, next_tag);
 	next->status = TASK_RUNNING;
+	
+	process_activate(next);
+	
 	switch_to(cur, next);
 }
 

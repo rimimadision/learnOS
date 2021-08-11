@@ -14,7 +14,8 @@ ASFLAGS = -f elf
 CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS = $(BUILD_DIR)/main.o    $(BUILD_DIR)/init.o      $(BUILD_DIR)/keyboard.o\
-	   $(BUILD_DIR)/ioqueue.o $(BUILD_DIR)/console.o   $(BUILD_DIR)/tss.o\
+	   $(BUILD_DIR)/ioqueue.o $(BUILD_DIR)/process.o\
+	   $(BUILD_DIR)/console.o $(BUILD_DIR)/tss.o\
 	   $(BUILD_DIR)/sync.o    $(BUILD_DIR)/thread.o    $(BUILD_DIR)/list.o\
 	   $(BUILD_DIR)/timer.o   $(BUILD_DIR)/interrupt.o $(BUILD_DIR)/kernel.o\
 	   $(BUILD_DIR)/print.o   $(BUILD_DIR)/memory.o    $(BUILD_DIR)/bitmap.o\
@@ -35,6 +36,12 @@ $(BUILD_DIR)/keyboard.o : device/keyboard.c device/keyboard.h lib/kernel/print.h
 
 $(BUILD_DIR)/ioqueue.o : device/ioqueue.c device/ioqueue.h kernel/debug.h\
 						 kernel/interrupt.h kernel/global.h 
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/process.o : userprog/process.c userprog/process.h thread/thread.h kernel/debug.h\
+						 kernel/interrupt.h kernel/global.h kernel/memory.h userprog/userprog.h\
+						 userprog/tss.h device/console.h lib/string.h lib/kernel/bitmap.h\
+						 lib/kernel/list.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/console.o : device/console.c device/console.h lib/kernel/print.h\

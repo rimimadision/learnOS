@@ -2,5 +2,6 @@
 #define __USERPROG_USERPROG_H
 
 #define USER_STACK3_VADDR (0xc0000000 - 0x1000)
+#define DEFAULT_PRIO 31
 
 #endif // __USERPROG_USERPROG_H

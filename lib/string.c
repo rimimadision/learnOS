@@ -20,7 +20,7 @@ void memcpy(void* dst_, const void* src_, uint32_t size)
 
 	while(size--)
 	{   
-	   *dst_bytes++ = *src_bytes;
+	   *dst_bytes++ = *src_bytes++;
 	}
 }   
  
