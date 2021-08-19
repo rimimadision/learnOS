@@ -10,6 +10,7 @@
 #define elem2entry(struct_type, member, elem_ptr)\
 		(struct_type*)((int)elem_ptr - offset(struct_type, member))
 
+typedef int16_t pid_t;
 typedef void thread_func(void*); // universal function type
 
 extern struct list thread_ready_list;
@@ -88,6 +89,7 @@ struct task_struct
 {
 	uint32_t* self_kstack; // every kernel_thread will have its own kernel_stack 
 						   // with privilege_level = 0
+	pid_t pid;
 	enum task_status status;
 	char name[16];
 	uint8_t priority;

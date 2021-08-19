@@ -5,7 +5,7 @@
 #include "io.h"
 #include "print.h"
 
-#define IDT_DESC_CNT 0X30
+#define IDT_DESC_CNT 0X81
 #define PIC_M_CTRL 0X20
 #define PIC_M_DATA 0X21
 #define PIC_S_CTRL 0Xa0
@@ -23,6 +23,8 @@ struct gate_desc
 	uint8_t attribute;
 	uint16_t func_offset_high_word;
 };
+
+extern uint32_t syscall_handler(void);
 
 void idt_init(void);
 void register_handler(uint8_t vec_no, intr_handler function);
@@ -81,6 +83,9 @@ static void idt_desc_init(void)
 	{
 		make_idt_desc(&idt[i], IDT_DESC_ATTR_DPL0, intr_entry_table[i]);
 	}
+	
+	/* make syscall 0x80 interrupt descriptor with dpl=3 (used by userprog)*/
+	make_idt_desc(&idt[0x80], IDT_DESC_ATTR_DPL3, syscall_handler);
 	put_str(" idt_desc_init done\n");
 }
 

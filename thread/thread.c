@@ -6,15 +6,18 @@
 #include "list.h"
 #include "interrupt.h"
 #include "process.h"
+#include "sync.h"
 
 struct task_struct* main_thread;
 struct list thread_ready_list;
 struct list thread_all_list;
+struct lock pid_lock;
 
 extern void switch_to(struct task_struct* cur, struct task_struct* next);
 
 static void kernel_thread(thread_func* function, void* func_arg);
 static void make_main_thread(void);
+static pid_t allocate_pid(void);
 
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
@@ -40,6 +43,13 @@ static void kernel_thread(thread_func* function, void* func_arg)
 	function(func_arg);
 }
 
+static pid_t allocate_pid(void) {
+	static pid_t next_pid = 0;
+	lock_acquire(&pid_lock);
+	next_pid++;
+	lock_release(&pid_lock);
+	return next_pid;
+}
 /* initialize thread_stack */
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg)
 {
@@ -62,6 +72,7 @@ void thread_create(struct task_struct* pthread, thread_func* function, void* fun
 void init_thread(struct task_struct* pthread, char* name, int prio)
 {
 	memset(pthread, 0, sizeof(*pthread));
+	pthread->pid = allocate_pid();
 	strcpy(pthread->name, name);
 
 	if(pthread == main_thread)
@@ -139,6 +150,7 @@ void thread_init(void)
 	put_str("thread_init start\n");
 	list_init(&thread_ready_list);
 	list_init(&thread_all_list);
+	lock_init(&pid_lock);
 	make_main_thread();
 	put_str("thread_init done\n");
 }
