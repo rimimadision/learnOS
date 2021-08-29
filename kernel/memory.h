@@ -21,6 +21,18 @@ struct vaddr_pool
 	uint32_t vaddr_start; 
 };
 
+struct mem_block {
+	struct list_elem free_elem;
+};
+
+struct mem_block_desc {
+	uint32_t block_size; 
+	uint32_t block_per_arena;
+	struct list free_list;
+};
+
+#define DESC_CNT 7 // 16, 32, 64, 128, 256, 512, 1024 (MB)
+
 enum pool_flags
 {
 	PF_KERNEL = 1,	

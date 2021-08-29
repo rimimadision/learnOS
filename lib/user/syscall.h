@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 enum SYSCALL_NR {
-	SYS_GETPID
+	SYS_GETPID,
 	SYS_WRITE
 };
 uint32_t getpid(void);

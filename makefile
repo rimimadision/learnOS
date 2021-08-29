@@ -13,7 +13,7 @@ LIB = -I lib/ \
 ASFLAGS = -f elf
 CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
-OBJS = $(BUILD_DIR)/main.o     $(BUILD_DIR)/init.o\
+OBJS = $(BUILD_DIR)/main.o     $(BUILD_DIR)/init.o      $(BUILD_DIR)/stdio.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o\
 	   $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o   $(BUILD_DIR)/process.o\
 	   $(BUILD_DIR)/console.o  $(BUILD_DIR)/tss.o\
@@ -31,11 +31,15 @@ $(BUILD_DIR)/init.o : kernel/init.c kernel/init.h lib/kernel/print.h userprog/ts
 					  lib/stdint.h kernel/interrupt.h device/timer.h device/console.h userprog/syscall-init.h
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/stdio.o : lib/stdio.c lib/stdio.h kernel/global.h lib/user/syscall.c lib/stdint.h 
+	$(CC) $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/syscall.o : lib/user/syscall.c lib/user/syscall.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/syscall-init.o : userprog/syscall-init.c userprog/syscall-init.h lib/stdint.h\
-							  thread/thread.h lib/kernel/print.h lib/user/syscall.h
+							  thread/thread.h lib/kernel/print.h lib/user/syscall.h\
+							  device/console.h lib/string.h
 	$(CC) $(CFLAGS) $< -o $@
 
 

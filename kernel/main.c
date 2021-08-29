@@ -9,6 +9,7 @@
 #include "process.h"
 #include "syscall.h"
 #include "syscall-init.h"
+#include "stdio.h"
 
 void k_thread_a(void* arg);
 void k_thread_b(void* arg);
@@ -23,12 +24,12 @@ int main(void){
 	process_execute(u_prog_a, "user_prog_a");
 	process_execute(u_prog_b, "user_prog_b");
 	
-	console_put_str("main_pid:0x");
-	console_put_int(sys_getpid());
-	console_put_str("\n");
+	//console_put_str("main_pid:0x");
+	//console_put_int(sys_getpid());
+	//console_put_str("\n");
 	
-	thread_start("k_thread_a", 31, k_thread_a, "argA");
-	thread_start("k_thread_b", 31, k_thread_b, "argB");
+	//thread_start("k_thread_a", 31, k_thread_a, "argA");
+	//thread_start("k_thread_b", 31, k_thread_b, "argB");
 			
 	intr_enable();
 	while(1);
@@ -62,11 +63,13 @@ void k_thread_b(void* arg)
 }
 
 void u_prog_a() {
-	pid_a = getpid();
+	char buf[20];
+	sprintf(buf, "nihao%d%s\n",1, "he");
+	printf("%s", buf);
 	while(1);
 }
 
 void u_prog_b() {
-	pid_b = getpid();
+	printf("b:%x\n", getpid());
 	while(1);
 }
