@@ -243,7 +243,7 @@ static void page_table_add(void* _vaddr, void* _page_phyaddr)
 }
 
 static void page_table_pte_remove(uint32_t vaddr) {
-	uint32_t* pte = pte_ptr(vaddr);	
+	uint32_t* pte = pte_ptr((void*)vaddr);	
 	ASSERT(*pte & 0x1);
 	*pte &= ~PG_P_1;
 	asm volatile("invlpg %0"::"m"(vaddr):"memory"); // fresh TLB
@@ -299,8 +299,43 @@ static void vaddr_remove(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
 	}
 }
 
-void* mfree_page(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
+void mfree_page(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
 	uint32_t pg_phy_addr;
+	uint32_t vaddr = (uint32_t)_vaddr;
+	uint32_t page_cnt = 0;
+
+	ASSERT(pg_cnt >= 1 && vaddr % PG_SIZE == 0);
+		
+	pg_phy_addr = addr_v2p(vaddr);
+
+	ASSERT((pg_phy_addr % PG_SIZE) == 0 && pg_phy_addr >= 0x102000); // 0x102000 = 1MB + 1KB(PD) + 1KB(PT)
+
+	if(pg_phy_addr >= u_p_pool.paddr_start) {
+		vaddr -= PG_SIZE;
+
+		while(page_cnt < pg_cnt) {
+			vaddr += PG_SIZE;
+			pg_phy_addr = addr_v2p(vaddr);
+			ASSERT((pg_phy_addr % PG_SIZE) == 0 && pg_phy_addr >= u_p_pool.paddr_start);
+			pfree(pg_phy_addr);
+			page_table_pte_remove(vaddr);
+			page_cnt++;
+		}
+
+		vaddr_remove(pf, _vaddr, pg_cnt);
+	} else {
+		vaddr -= PG_SIZE;
+		while(page_cnt < pg_cnt) {
+			vaddr += PG_SIZE;
+			pg_phy_addr = addr_v2p(vaddr);
+			ASSERT((pg_phy_addr % PG_SIZE) == 0 && pg_phy_addr >= k_p_pool.paddr_start && pg_phy_addr < u_p_pool.paddr_start);
+			pfree(pg_phy_addr);
+			page_table_pte_remove(vaddr);
+			page_cnt++;
+		}
+
+		vaddr_remove(pf, _vaddr, pg_cnt);
+	}
 }
 
 
@@ -447,4 +482,40 @@ void* sys_malloc(uint32_t size) {
 		
 		return (void*)b;	
 	}
+}
+
+void sys_free(void* ptr) {
+	ASSERT(ptr != NULL);
+	if(ptr == NULL) {return;}
+	enum pool_flags pf;
+	struct paddr_pool* mem_pool;
+	
+	if(get_cur_thread_pcb()->pgdir == NULL) { // kernel thread
+		pf = PF_KERNEL;
+		mem_pool = &k_p_pool;
+	} else {
+		pf = PF_USER;
+		mem_pool = &u_p_pool;
+	}
+
+	lock_acquire(&mem_pool->lock);
+	struct mem_block* b = ptr;
+	struct arena* a = block2arena(b);
+	
+	if(a->desc == NULL && a->large == true) {
+		mfree_page(pf, a, a->cnt);
+	} else {
+		list_append(&a->desc->free_list, &b->free_elem);
+
+		if(++a->cnt == a->desc->blocks_per_arena) {
+			uint32_t block_idx;
+			for(block_idx = 0; block_idx < a->desc->blocks_per_arena; block_idx++) {
+				struct mem_block* b = arena2block(a, block_idx);
+				ASSERT(elem_find(&a->desc->free_list, &b->free_elem));
+				list_remove(&b->free_elem);
+			}
+			mfree_page(pf, a, 1);
+		}
+	}
+	lock_release(&mem_pool->lock);
 }

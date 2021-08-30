@@ -24,10 +24,6 @@ int main(void){
 	//process_execute(u_prog_a, "user_prog_a");
 	//process_execute(u_prog_b, "user_prog_b");
 	
-	//console_put_str("main_pid:0x");
-	//console_put_int(sys_getpid());
-	//console_put_str("\n");
-	
 	thread_start("k_thread_a", 31, k_thread_a, "argA");
 	thread_start("k_thread_b", 31, k_thread_b, "argB");
 			
@@ -38,15 +34,57 @@ int main(void){
 
 void k_thread_a(void* arg)
 {
-    void* addr = sys_malloc(33);
-	printf("%s %x\n", (char*)arg, (int)addr);	
+	void* addr1;
+	void* addr2;
+	void* addr3;
+	void* addr4;
+	void* addr5;
+	
+	int max = 1000;
+	while(max --) {
+		int size = 128;
+		addr1 = sys_malloc(size);
+		size *= 2;		
+		addr2 = sys_malloc(size);
+		size *= 2;
+		addr3 = sys_malloc(size);
+		size *= 128;
+		addr4 = sys_malloc(size);
+		sys_free(addr1);
+		sys_free(addr2);
+		sys_free(addr3);
+		sys_free(addr4);
+	}
+		
+	printf("%s\n", (char*)arg);	
 	while(1);
 }
 
 void k_thread_b(void* arg)
 {
-	void* addr = sys_malloc(63);
-	printf("%s %x\n", (char*)arg, (int)addr);		
+	void* addr1;
+	void* addr2;
+	void* addr3;
+	void* addr4;
+	void* addr5;
+	
+	int max = 1000;
+	while(max --) {
+		int size = 128;
+		addr1 = sys_malloc(size);
+		size *= 2;		
+		addr2 = sys_malloc(size);
+		size *= 2;
+		addr3 = sys_malloc(size);
+		size *= 16;
+		addr4 = sys_malloc(size);
+		sys_free(addr1);
+		sys_free(addr2);
+		sys_free(addr3);
+		sys_free(addr4);
+	}
+		
+	printf("%s\n", (char*)arg);	
 	while(1);
 }
 
