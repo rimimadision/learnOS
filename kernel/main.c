@@ -21,8 +21,8 @@ int main(void){
 	
 	init_all();
 
-	//process_execute(u_prog_a, "user_prog_a");
-	//process_execute(u_prog_b, "user_prog_b");
+	process_execute(u_prog_a, "user_prog_a");
+	process_execute(u_prog_b, "user_prog_b");
 	
 	thread_start("k_thread_a", 31, k_thread_a, "argA");
 	thread_start("k_thread_b", 31, k_thread_b, "argB");
@@ -40,7 +40,7 @@ void k_thread_a(void* arg)
 	void* addr4;
 	void* addr5;
 	
-	int max = 1000;
+	int max = 1;
 	while(max --) {
 		int size = 128;
 		addr1 = sys_malloc(size);
@@ -68,7 +68,7 @@ void k_thread_b(void* arg)
 	void* addr4;
 	void* addr5;
 	
-	int max = 1000;
+	int max = 1;
 	while(max --) {
 		int size = 128;
 		addr1 = sys_malloc(size);
@@ -89,13 +89,29 @@ void k_thread_b(void* arg)
 }
 
 void u_prog_a() {
-	char buf[20];
-	sprintf(buf, "nihao%d%s\n",1, "he");
-	printf("%s", buf);
+	void* addr1 = malloc(256);
+	void* addr2 = malloc(255);
+	void* addr3 = malloc(254);
+
+	printf("prog_a : 0x%x, 0x%x, 0x%x\n", (int)addr1, (int)addr2, (int)addr3);
+
+	free(addr1);
+	free(addr2);
+	free(addr3);	
+
 	while(1);
 }
 
 void u_prog_b() {
-	printf("b:%x\n", getpid());
+	void* addr1 = malloc(256);
+	void* addr2 = malloc(255);
+	void* addr3 = malloc(254);
+
+	printf("prog_a : 0x%x, 0x%x, 0x%x\n", (int)addr1, (int)addr2, (int)addr3);
+
+	free(addr1);
+	free(addr2);
+	free(addr3);	
+	
 	while(1);
 }

@@ -40,7 +40,7 @@ $(BUILD_DIR)/syscall.o : lib/user/syscall.c lib/user/syscall.h
 
 $(BUILD_DIR)/syscall-init.o : userprog/syscall-init.c userprog/syscall-init.h lib/stdint.h\
 							  thread/thread.h lib/kernel/print.h lib/user/syscall.h\
-							  device/console.h lib/string.h
+							  device/console.h lib/string.h kernel/memory.h
 	$(CC) $(CFLAGS) $< -o $@
 
 
