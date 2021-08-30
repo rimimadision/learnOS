@@ -2,11 +2,11 @@
 #include "sync.h"
 #include "thread.h"
 #include "debug.h"
+#include "list.h"
+#include "interrupt.h"
 
 /*
-------------------------------------------------------------------
-process of malloc_page                                           |
-																 |
+-----------------------------------------------------------------|
 1. |alloc_v_pages(allocate pages in virtual mem)  | -->			 |
 2. |palloc(allocate physical pages)               | -->			 |
 3. |page_table_add(map physical pages to virtual pages)|	     |
@@ -34,6 +34,13 @@ struct paddr_pool
 	struct lock lock;
 };
 
+struct arena {
+	struct mem_block_desc* desc;
+	uint32_t cnt; // page_cnt for large arena, block_cnt for small arena
+	bool large;
+};
+
+struct mem_block_desc k_block_desc[DESC_CNT];
 struct paddr_pool k_p_pool, u_p_pool;
 struct vaddr_pool k_v_pool;
 
@@ -42,6 +49,10 @@ static void mem_pool_init(uint32_t all_mem);
 static void* alloc_v_pages(enum pool_flags pf, uint32_t pg_cnt);
 static void* palloc(struct paddr_pool* ptr_p_pool);
 static void page_table_add(void* _vaddr, void* _page_phyaddr);
+static void page_table_pte_remove(uint32_t vaddr);
+static struct mem_block* arena2block(struct arena* a, uint32_t idx);
+static struct arena* block2arena(struct mem_block* b);
+static void vaddr_remove(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt);
 
 /* global funtion declarations are in kernel/memory.h */
 
@@ -102,12 +113,31 @@ static void mem_pool_init(uint32_t all_mem)
 	put_str("mem pool init done\n");
 }
 
+void block_desc_init(struct mem_block_desc* desc_array) {
+	uint16_t desc_idx, block_size = 16;
+	
+	for(desc_idx = 0; desc_idx < DESC_CNT; desc_idx++) {
+		desc_array[desc_idx].block_size = block_size;
+		desc_array[desc_idx].blocks_per_arena = (PG_SIZE - sizeof(struct arena)) / block_size;
+		list_init(&desc_array[desc_idx].free_list);
+		block_size *= 2;
+	}
+}
 void mem_init()
 {
 	put_str("mem_init start\n");
 	uint32_t mem_bytes_total = (*(uint32_t*) 0xb00);
 	mem_pool_init(mem_bytes_total);
+	block_desc_init(k_block_desc);
 	put_str("mem_init done\n");
+}
+
+static struct mem_block* arena2block(struct arena* a, uint32_t idx) {
+	return (struct mem_block*)((uint32_t)a + sizeof(struct arena) + idx *(a->desc->block_size));	
+}
+
+static struct arena* block2arena(struct mem_block* b) {
+	return (struct arena*)((uint32_t)b & 0xfffff000);
 }
 
 /* return the start address if sucess, or else return NULL */
@@ -177,6 +207,20 @@ static void* palloc(struct paddr_pool* ptr_p_pool)
 	return (void*)(ptr_p_pool->paddr_start + bit_idx_start * PG_SIZE);
 }
 
+void pfree(uint32_t pg_phy_addr) {
+	struct paddr_pool* mem_pool;
+	uint32_t bit_idx = 0;
+
+	if(pg_phy_addr >= u_p_pool.paddr_start) {
+		mem_pool = &u_p_pool;	
+		bit_idx = (pg_phy_addr - u_p_pool.paddr_start) / PG_SIZE;
+	} else {
+		mem_pool = &k_p_pool;
+		bit_idx = (pg_phy_addr - k_p_pool.paddr_start) / PG_SIZE;
+	}
+	bitmap_set(&mem_pool->paddr_bitmap, bit_idx, 0);
+}
+
 /* mapping _vaddr to _page_phyaddr */
 static void page_table_add(void* _vaddr, void* _page_phyaddr)
 {
@@ -196,6 +240,13 @@ static void page_table_add(void* _vaddr, void* _page_phyaddr)
 		PANIC("pte repeat");
 	}
 	*pte = ((uint32_t)_page_phyaddr | PG_US_U | PG_RW_W | PG_P_1);
+}
+
+static void page_table_pte_remove(uint32_t vaddr) {
+	uint32_t* pte = pte_ptr(vaddr);	
+	ASSERT(*pte & 0x1);
+	*pte &= ~PG_P_1;
+	asm volatile("invlpg %0"::"m"(vaddr):"memory"); // fresh TLB
 }
 
 void* malloc_page(enum pool_flags pf, uint32_t pg_cnt)
@@ -229,6 +280,29 @@ void* malloc_page(enum pool_flags pf, uint32_t pg_cnt)
 
 	return alloc_vaddr_start;
 }
+
+/* free pg_cnt pages in v_pool start with _vaddr */
+static void vaddr_remove(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
+	uint32_t bit_idx_start = 0, vaddr = (uint32_t)_vaddr, cnt = 0;
+	
+	if(pf == PF_KERNEL) {
+		bit_idx_start = (vaddr - k_v_pool.vaddr_start) / PG_SIZE;
+		while(cnt < pg_cnt) {
+			bitmap_set(&k_v_pool.vaddr_bitmap, bit_idx_start + cnt++, 0);
+		}
+	} else {
+		struct task_struct* cur_thread = get_cur_thread_pcb();
+		bit_idx_start = (vaddr - cur_thread->userprog_vaddr.vaddr_start) / PG_SIZE;
+		while(cnt < pg_cnt) {
+			bitmap_set(&cur_thread->userprog_vaddr.vaddr_bitmap, bit_idx_start + cnt++, 0);
+		}
+	}
+}
+
+void* mfree_page(enum pool_flags pf, void* _vaddr, uint32_t pg_cnt) {
+	uint32_t pg_phy_addr;
+}
+
 
 void* get_kernel_pages(uint32_t pg_cnt)
 {
@@ -290,4 +364,87 @@ void* get_a_page(enum pool_flags pf, uint32_t vaddr) {
 uint32_t addr_v2p(uint32_t vaddr) {
 	uint32_t* pte = pte_ptr((void*)vaddr);
 	return ((*pte & 0xfffff000) + (vaddr & 0xfff));
+}
+
+void* sys_malloc(uint32_t size) {
+	enum pool_flags PF;
+	struct paddr_pool* mem_pool;
+	uint32_t pool_size;
+	struct mem_block_desc* desc;
+	struct task_struct* cur_thread = get_cur_thread_pcb(); 
+
+	if(cur_thread->pgdir == NULL) {
+		PF = PF_KERNEL;
+		mem_pool = &k_p_pool;
+		pool_size = k_p_pool.paddr_pool_size;
+		desc = k_block_desc;
+	} else {
+		PF = PF_USER;
+		pool_size = u_p_pool.paddr_pool_size;
+		mem_pool = &u_p_pool;
+		desc = cur_thread->u_block_desc;
+	}
+	
+	if(!(size > 0 && size < pool_size)) {
+		return NULL;
+	}
+	
+	struct arena* a;
+	struct mem_block* b;
+	lock_acquire(&mem_pool->lock);
+	
+	if(size > 1024) { // alloc pages
+		uint32_t page_cnt = DIV_ROUND_UP(size + sizeof(struct arena), PG_SIZE);
+		a = (struct arena*)malloc_page(PF, page_cnt);
+		if(a != NULL) {
+			
+			memset(a, 0, page_cnt * PG_SIZE);		
+	
+			//initialize arena
+			a->desc = NULL;
+			a->cnt = page_cnt;
+			a->large = true;
+			a += 1;
+		}
+		lock_release(&mem_pool->lock);
+		return (void*)a;
+	} else { // alloc mem_space in one page
+		uint8_t desc_idx;
+		
+		for(desc_idx = 0; desc_idx < DESC_CNT; desc_idx++) {
+			if(size <= desc[desc_idx].block_size){break;}
+		}
+		
+		if(list_empty(&desc[desc_idx].free_list)) {
+			a = malloc_page(PF, 1);
+			if(a == NULL) {
+				lock_release(&mem_pool->lock);
+				return NULL;
+			} 
+			
+			memset(a, 0, PG_SIZE);
+			
+			a->desc = &desc[desc_idx];
+			a->large = false;
+			a->cnt = desc[desc_idx].blocks_per_arena;
+
+			uint32_t block_idx;
+				
+			enum intr_status old_status = intr_disable();
+			for(block_idx = 0; block_idx < desc[desc_idx].blocks_per_arena; block_idx++) {
+				b = arena2block(a, block_idx);
+				ASSERT(!elem_find(&a->desc->free_list, &b->free_elem));
+				list_append(&a->desc->free_list, &b->free_elem);
+			}
+			intr_set_status(old_status);
+		}
+
+		b = elem2entry(struct mem_block, free_elem, list_pop(&desc[desc_idx].free_list));
+		memset(b, 0, desc[desc_idx].block_size);
+		a = block2arena(b);
+		a->cnt--;
+		lock_release(&mem_pool->lock);
+		
+		return (void*)b;	
+	}
 }

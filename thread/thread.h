@@ -102,7 +102,8 @@ struct task_struct
 	
 	uint32_t* pgdir; // vaddr of task's page_table(if task is a process, it wiil have its own 
 					 // virtual space, if task is a thread, then set pgdir = NULL)
-	struct vaddr_pool userprog_vaddr; 
+	struct vaddr_pool userprog_vaddr;
+	struct mem_block_desc u_block_desc[DESC_CNT]; 
 	uint32_t stack_magic; // 0x19700505
 };
 

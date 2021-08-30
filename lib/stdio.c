@@ -2,6 +2,7 @@
 #include "global.h"
 #include "stdint.h"
 #include "syscall.h"
+#include "string.h"
 
 #define va_start(ap, v) ap = (va_list)&v
 #define va_arg(ap, t) *((t*)(ap += 4))
