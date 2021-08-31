@@ -15,6 +15,7 @@ CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototype
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS = $(BUILD_DIR)/main.o     $(BUILD_DIR)/init.o      $(BUILD_DIR)/stdio.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o\
+	   $(BUILD_DIR)/stdio-kernel.o\
 	   $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o   $(BUILD_DIR)/process.o\
 	   $(BUILD_DIR)/console.o  $(BUILD_DIR)/tss.o\
 	   $(BUILD_DIR)/sync.o     $(BUILD_DIR)/thread.o    $(BUILD_DIR)/list.o\
@@ -43,6 +44,9 @@ $(BUILD_DIR)/syscall-init.o : userprog/syscall-init.c userprog/syscall-init.h li
 							  device/console.h lib/string.h kernel/memory.h
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/stdio-kernel.o : lib/kernel/stdio-kernel.c lib/kernel/stdio-kernel.h lib/stdio.h\
+							  kernel/global.h device/console.h lib/stdint.h
+	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/keyboard.o : device/keyboard.c device/keyboard.h lib/kernel/print.h\
 						 kernel/interrupt.h lib/kernel/io.h kernel/global.h

@@ -56,7 +56,7 @@ void k_thread_a(void* arg)
 		sys_free(addr4);
 	}
 		
-	printf("%s\n", (char*)arg);	
+	printk("%s\n", (char*)arg);	
 	while(1);
 }
 
