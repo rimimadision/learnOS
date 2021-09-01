@@ -1,6 +1,8 @@
 #include "ide.h"
 #include "global.h"
 #include "stdio.h"
+#include "io.h"
+#include "debug.h"
 
 /* define some ports number about disk */
 #define reg_data(channel) (channel->port_base + 0)
@@ -37,6 +39,8 @@
 uint8_t channel_cnt; // counted by disks_cnt
 struct ide_channel channels[CHANNEL_CNT];
 
+static void select_disk(struct disk* hd);
+
 void ide_init() {
 	printk("ide_init start\n");
 	
@@ -70,5 +74,26 @@ void ide_init() {
 }
 
 static void select_disk(struct disk* hd) {
-	
+	uint8_t reg_device = BIT_DEV_MBS | BIT_DEV_MOD_LBA;
+	if(hd->dev_no == 1) {
+		reg_device |= BIT_DEV_DEV_SLV;
+	}
+
+	outb(reg_dev(hd->my_channel), reg_device);
+}
+
+static void select_sector(struct disk* hd, uint32_t lba, uint8_t sec_cnt) {
+	ASSERT(lba <= max_lba);
+	struct ide_channel* channel = hd->my_channel;
+	outb(reg_sect_cnt(channel), sec_cnt);
+	outb(reg_lba_l(channel), (uint8_t)(lba & 0xff));
+	outb(reg_lba_m(channel), (uint8_t)((lba >> 8) & 0xff));
+	outb(reg_lba_h(channel), (uint8_t)((lba >> 16) & 0xff));
+	outb(reg_dev(channel), BIT_DEV_MBS | BIT_DEV_MOD_LBA |\
+		 (hd->dev_no == 0) ? BIT_DEV_DEV_MSR : BIT_DEV_DEV_SLV |\
+		 (uint8_t)(lba >> 24));
+}
+
+static void cmd_out(struct ide_channel* channel, uint8_t cmd) {
+
 }
