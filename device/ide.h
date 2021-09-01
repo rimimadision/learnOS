@@ -4,7 +4,9 @@
 #include "stdint.h"
 #include "list.h"
 #include "bitmap.*h"
+#include "sync.h"
 
+#define CHANNEL_CNT 2
 #define MAX_LOGIC_PART 8 // support 8 logic partition at most
 
 struct partition{
@@ -26,5 +28,17 @@ struct disk {
 	struct partition prim_parts[4];
 	struct partition logic_parts[MAX_LOGIC_PART];
 };
+
+struct ide_channel {
+	char name[8];
+	uint16_t port_base;
+	uint8_t irq_no;
+	struct lock lock;
+	bool expecting_intr; // true for waiting interrupt form disk
+	struct semaphore disk_done; // 0 for block itself after send command to disk
+	struct disk devices[2];
+};
+
+void ide_init();
 
 #endif // __DEVICE_IDE_H

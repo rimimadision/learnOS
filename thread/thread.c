@@ -9,6 +9,7 @@
 #include "sync.h"
 
 struct task_struct* main_thread;
+struct task_struct* idle_thread;
 struct list thread_ready_list;
 struct list thread_all_list;
 struct lock pid_lock;
@@ -17,12 +18,20 @@ extern void switch_to(struct task_struct* cur, struct task_struct* next);
 
 static void kernel_thread(thread_func* function, void* func_arg);
 static void make_main_thread(void);
+static void idle(void* arg UNUSED);
 static pid_t allocate_pid(void);
 
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
 void init_thread(struct task_struct* pthread, char* name, int prio);
 void thread_block(enum task_status stat);
 void thread_unblock(struct task_struct* pthread);
+
+static void idle(void* arg UNUSED) {
+	while(1) {
+		thread_block(TASK_BLOCKED);
+		asm volatile ("sti; hlt" : : : "memory");
+	}
+}
 
 /* get current thread PCB */
 struct task_struct* get_cur_thread_pcb(void)
@@ -135,7 +144,9 @@ void schedule(void)
 		// some reason, then we won't append it into thread_ready_list
 	}
 	
-	ASSERT(!list_empty(&thread_ready_list));
+	if(list_empty(&thread_ready_list)) {
+		thread_unblock(idle_thread);
+	}
 	struct list_elem* next_tag = list_pop(&thread_ready_list);
 	struct task_struct* next = elem2entry(struct task_struct, general_tag, next_tag);
 	next->status = TASK_RUNNING;
@@ -152,6 +163,7 @@ void thread_init(void)
 	list_init(&thread_all_list);
 	lock_init(&pid_lock);
 	make_main_thread();
+	idle_thread = thread_start("idle", 10, idle, NULL);
 	put_str("thread_init done\n");
 }
 
@@ -184,4 +196,14 @@ void thread_unblock(struct task_struct* pthread)
 	}
 
 	intr_set_status(old_status);
+}
+
+void thread_yield(void) {
+	struct task_struct* cur_thread = get_cur_thread_pcb();
+	enum intr_status old_status = intr_disable();
+	ASSERT(!elem_find(&thread_ready_list, &cur_thread->general_tag));
+	list_append(&thread_ready_list, &cur_thread->general_tag);
+	cur_thread->status = TASK_READY;
+	schedule();
+	intr_set_status(old_status);	
 }

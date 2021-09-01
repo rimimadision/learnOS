@@ -115,5 +115,6 @@ void thread_block(enum task_status stat);
 void thread_unblock(struct task_struct* pthread);
 void init_thread(struct task_struct* pthread, char* name, int prio);
 void thread_create(struct task_struct* pthread, thread_func* function, void* func_arg);
+void thread_yield(void);
 
 #endif // __THREAD_THREAD_H

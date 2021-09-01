@@ -3,6 +3,7 @@
 #include "stdint.h"
 
 #define NULL (void*)0
+#define UNUSED __attribute__((unused))
 typedef enum{false, true} bool;
 
 /* GDT */

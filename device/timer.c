@@ -5,6 +5,7 @@
 #include "interrupt.h"
 #include "debug.h"
 #include "stdint.h"
+#include "global.h"
 
 #define IRQ0_FREQUENCY 100
 #define INPUT_FREQUENCY 1193180
@@ -14,6 +15,7 @@
 #define COUNTER_MODE 2
 #define READ_WRITE_LATCH 3
 #define PIT_CONTROL_PORT 0x43
+#define mil_seconds_per_intr (1000 / IRQ0_FREQUENCY)
 
 uint32_t total_ticks;
 
@@ -59,3 +61,17 @@ static void intr_timer_handler(void)
 		cur_thread->ticks--;
 	}
 }
+
+static void ticks_to_sleep(uint32_t sleep_ticks) {
+	uint32_t start_tick = total_ticks;
+	
+	while((total_ticks - start_tick) < sleep_ticks) {
+		thread_yield();
+	}
+}
+
+void mtime_sleep(uint32_t mil_sec) {
+	uint32_t sleep_ticks = DIV_ROUND_UP(mil_sec, mil_seconds_per_intr);
+	ASSERT(sleep_ticks > 0);
+	ticks_to_sleep(sleep_ticks);
+} 
