@@ -12,6 +12,7 @@
 #include "stdio-kernel.h"
 #include "stdio.h"
 #include "timer.h"
+#include "ide.h"
 
 void k_thread_a(void* arg);
 void k_thread_b(void* arg);
@@ -30,7 +31,6 @@ int main(void){
 	//thread_start("k_thread_b", 31, k_thread_b, "argB");
 			
 	intr_enable();
-
 	while(1);
 	return 0;
 }

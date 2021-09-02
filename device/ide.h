@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 #include "list.h"
-#include "bitmap.*h"
+#include "bitmap.h"
 #include "sync.h"
 
 #define CHANNEL_CNT 2
@@ -39,6 +39,9 @@ struct ide_channel {
 	struct disk devices[2];
 };
 
-void ide_init();
+void ide_init(void);
+void ide_read(struct disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt);
+void ide_write(struct disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt);
+void intr_hd_handler(uint8_t irq_no);
 
 #endif // __DEVICE_IDE_H

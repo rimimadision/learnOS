@@ -6,11 +6,7 @@
 #include "debug.h"
 #include "print.h"
 
-static void sema_init(struct semaphore* psema, uint8_t value);
-static void sema_down(struct semaphore* psema);
-static void sema_up(struct semaphore* psema);
-
-static void sema_init(struct semaphore* psema, uint8_t value)
+void sema_init(struct semaphore* psema, uint8_t value)
 { 
 	psema->value = value;
 	list_init(&psema->waiters);
@@ -23,7 +19,7 @@ void lock_init(struct lock* plock)
 	sema_init(&plock->lock_sema, 1); // binary semaphore
 }
 
-static void sema_down(struct semaphore* psema)
+void sema_down(struct semaphore* psema)
 {
 	enum intr_status old_status = intr_disable();
 	
@@ -43,7 +39,7 @@ static void sema_down(struct semaphore* psema)
 	intr_set_status(old_status);
 }
 
-static void sema_up(struct semaphore* psema)
+void sema_up(struct semaphore* psema)
 {
 	enum intr_status old_status = intr_disable();
 	

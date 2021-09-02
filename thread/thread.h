@@ -6,10 +6,6 @@
 #include "bitmap.h"
 #include "memory.h"
 
-#define offset(struct_type, member) (int)(&((struct_type*)0)->member)
-#define elem2entry(struct_type, member, elem_ptr)\
-		(struct_type*)((int)elem_ptr - offset(struct_type, member))
-
 typedef int16_t pid_t;
 typedef void thread_func(void*); // universal function type
 

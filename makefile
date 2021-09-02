@@ -15,7 +15,7 @@ CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototype
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o      $(BUILD_DIR)/stdio.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o\
-	   $(BUILD_DIR)/stdio-kernel.o\
+	   $(BUILD_DIR)/stdio-kernel.o $(BUILD_DIR)/ide.o\
 	   $(BUILD_DIR)/keyboard.o     $(BUILD_DIR)/ioqueue.o   $(BUILD_DIR)/process.o\
 	   $(BUILD_DIR)/console.o  	   $(BUILD_DIR)/tss.o\
 	   $(BUILD_DIR)/sync.o         $(BUILD_DIR)/thread.o    $(BUILD_DIR)/list.o\
@@ -29,7 +29,7 @@ $(BUILD_DIR)/main.o : kernel/main.c lib/kernel/print.h \
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/init.o : kernel/init.c kernel/init.h lib/kernel/print.h userprog/tss.h\
-					  lib/stdint.h kernel/interrupt.h device/timer.h device/console.h userprog/syscall-init.h
+					  lib/stdint.h kernel/interrupt.h device/timer.h device/console.h userprog/syscall-init.h device/ide.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/stdio.o : lib/stdio.c lib/stdio.h kernel/global.h lib/user/syscall.c lib/stdint.h\
@@ -46,6 +46,11 @@ $(BUILD_DIR)/syscall-init.o : userprog/syscall-init.c userprog/syscall-init.h li
 
 $(BUILD_DIR)/stdio-kernel.o : lib/kernel/stdio-kernel.c lib/kernel/stdio-kernel.h lib/stdio.h\
 							  kernel/global.h device/console.h lib/stdint.h
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/ide.o : device/ide.c device/ide.h lib/kernel/stdio-kernel.h lib/stdio.h\
+				     kernel/global.h lib/stdint.h lib/kernel/io.h device/timer.h\
+					 thread/sync.h kernel/interrupt.h lib/string.h lib/kernel/list.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/keyboard.o : device/keyboard.c device/keyboard.h lib/kernel/print.h\
