@@ -7,7 +7,7 @@
 struct inode {
 
 	uint32_t i_no;
-	uint32_t size; // if inode point a file, size means file size;
+	uint32_t i_size; // if inode point a file, size means file size;
 				   // if inode point a dir, size means total size 
 				   // of its entry
 	uint32_t i_open_cnts;
