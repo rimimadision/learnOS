@@ -7,9 +7,11 @@
 #define BLOCK_SIZE SECTOR_SIZE
 
 enum file_types {
-	FT_UNKNOWN;
-	FT_REGULAR;
-	FT_DIRECTORY;
+	FT_UNKNOWN,
+	FT_REGULAR,
+	FT_DIRECTORY
 };
+
+void filesys_init(void);
 
 #endif // __FS_FS_H

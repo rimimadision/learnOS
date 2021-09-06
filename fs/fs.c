@@ -27,7 +27,7 @@ static void partition_format(struct partition* part) {
 	block_bitmap_sects = DIV_ROUND_UP(block_bitmap_bit_len, BITS_PER_SECTOR); 	
 	
 	struct super_block sb;
-	sb.magic = 0x19700505	
+	sb.magic = 0x19700505;
 	sb.sec_cnt = part->sec_cnt;
 	sb.inode_cnt = MAX_FILES_PER_PART;
 	sb.part_lba_base = part->start_lba;
@@ -47,7 +47,7 @@ static void partition_format(struct partition* part) {
            "    inode_bitmap_sectors:0x%x\n    inode_table_lba:0x%x\n    inode_table_sectors:0x%x\n"\
            "    data_start_lba:0x%x\n", sb.magic, sb.part_lba_base, sb.sec_cnt, sb.inode_cnt,\
 		   sb.block_bitmap_lba, sb.block_bitmap_sects, sb.inode_bitmap_lba, sb.inode_bitmap_sects,\
-           sb.inode_table_lba. sb.inode_table_sects, sb.data_start_lba);
+           sb.inode_table_lba, sb.inode_table_sects, sb.data_start_lba);
 
 	struct disk* hd = part->my_disk;
 	
@@ -81,13 +81,13 @@ static void partition_format(struct partition* part) {
 	/* initialize the first entry 'root' in inode_table */
 	struct inode* i = (struct inode*)buf;
 	i->i_size = sb.dir_entry_size * 2; // . and ..
-	i->no = 0;
+	i->i_no = 0;
 	i->i_sectors[0] = sb.data_start_lba;
 	ide_write(hd, sb.inode_table_lba, buf, sb.inode_table_sects);
 	
 	/* write root into first block in free blocks(start form data_start_lba)*/
 	memset(buf, 0, buf_size);
-	struct dir_entry* p_de = (dir_entry*)buf;
+	struct dir_entry* p_de = (struct dir_entry*)buf;
 	/* init . */
 	memcpy(p_de->filename, ".", 1);
 	p_de->i_no = 0;
@@ -101,12 +101,54 @@ static void partition_format(struct partition* part) {
 
 	ide_write(hd, sb.data_start_lba, buf, 1);
 	
-	printk("    root_dir_lba:0x%x\n", sb,data_start_lba);
+	printk("    root_dir_lba:0x%x\n", sb.data_start_lba);
 	
 	sys_free(buf);
 	printk("%s format done\n", part->name);
 }
 
 void filesys_init(void) {
-	uint8_t channel_no = 0;
+	uint8_t channel_no = 0, dev_no = 0, part_idx = 0;
+	
+	struct super_block* sb_buf = (struct super_block*)sys_malloc(SECTOR_SIZE);
+	
+	if (sb_buf == NULL) {
+		PANIC("\nalloc memory failed\n");
+	}
+	printk("\nsearching filesystem......\n");
+	while (channel_no < channel_cnt) {
+		dev_no = 0;
+	
+		while (dev_no < 2) {
+			part_idx = 0;
+			if (dev_no == 0) {
+				dev_no++;
+				continue;
+			}
+			struct disk* hd = &channels[channel_no].devices[dev_no];
+			struct partition* part = hd->prim_parts;
+			while (part_idx < 12) {
+				if (part_idx == 4) {
+					part = hd->logic_parts;
+				}
+				
+				if (part->sec_cnt != 0) {
+					memset(sb_buf, 0, SECTOR_SIZE);
+					ide_read(hd, part->start_lba + 1, sb_buf, 1);
+
+					if (sb_buf->magic == 0x19700505) {
+						printk("%s has filesystem\n", part->name);
+					} else {
+						printk("formatting %s's partition %s......\n", hd->name, part->name);
+						partition_format(part);
+					}
+				}
+				part_idx++;
+				part++;
+			}
+			dev_no++;
+		}
+		channel_no++;
+	}
+	sys_free(sb_buf);
 }

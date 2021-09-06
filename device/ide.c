@@ -212,7 +212,6 @@ void ide_read(struct disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt) {
 		}
 		
 		select_sector(hd, lba + secs_done, (uint8_t)(secs_op & 0xff));
-		ASSERT(inb(reg_status(hd->my_channel) & BIT_ALT_STAT_DRDY));
 
 		cmd_out(hd->my_channel, CMD_READ_SECTOR);
 		sema_down(&hd->my_channel->disk_done);
@@ -248,7 +247,6 @@ void ide_write(struct disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt) {
 		}
 		
 		select_sector(hd, lba + secs_done, (uint8_t)(secs_op & 0xff));
-		ASSERT(inb(reg_status(hd->my_channel) & BIT_ALT_STAT_DRDY));
 
 		cmd_out(hd->my_channel, CMD_WRITE_SECTOR);
 

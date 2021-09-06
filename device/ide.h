@@ -39,6 +39,7 @@ struct ide_channel {
 	struct disk devices[2];
 };
 
+extern uint8_t channel_cnt;
 extern struct ide_channel channels[CHANNEL_CNT];
 
 void ide_init(void);
