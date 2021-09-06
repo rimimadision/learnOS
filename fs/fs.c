@@ -13,7 +13,6 @@
 
 struct partition* cur_part;
 
-
 static void partition_format(struct partition* part);
 static bool mount_partition(struct list_elem* pelem, int arg);
 
