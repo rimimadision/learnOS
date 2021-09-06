@@ -6,7 +6,7 @@
 #include "bitmap.h"
 #include "sync.h"
 
-#define CHANNEL_CNT 2
+#define CHANNEL_CNT 2 // channels supported most  
 #define MAX_LOGIC_PART 8 // support 8 logic partition at most
 
 struct partition{
