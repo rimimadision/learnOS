@@ -8,8 +8,13 @@
 #include "stdio-kernel.h"
 #include "memory.h"
 #include "string.h"
+#include "list.h"
+#include "debug.h"
+
+struct partition* cur_part;
 
 static void partition_format(struct partition* part);
+static bool mount_partition(struct list_elem* pelem, int arg);
 
 /* initialize partition, create fs in it */
 static void partition_format(struct partition* part) {
@@ -151,4 +156,52 @@ void filesys_init(void) {
 		channel_no++;
 	}
 	sys_free(sb_buf);
+
+	char default_part[8] = "sdb1";
+	list_traversal(&partition_list, mount_partition, (int)default_part);
+}
+
+static bool mount_partition(struct list_elem* pelem, int arg) {
+	char* part_name = (char*)arg;
+	struct partition* part = elem2entry(struct partition, part_tag, pelem);	
+	if (strcmp(part->name, part_name)) {
+		return false;
+	}
+
+	cur_part = part;
+	struct disk* hd = cur_part->my_disk;
+	
+	/* read super block */
+	struct super_block* sb_buf = (struct super_block*)sys_malloc(SECTOR_SIZE);	
+	cur_part->sb = (struct super_block*)sys_malloc(SECTOR_SIZE);
+	if (sb_buf == NULL || cur_part->sb == NULL) {
+		PANIC("alloc memory failed\n");
+	}
+	memset(sb_buf, 0, SECTOR_SIZE);
+	ide_read(hd, cur_part->start_lba + 1, sb_buf, 1);
+	memcpy(cur_part->sb, sb_buf, sizeof(struct super_block));	
+	
+	/* read block bitmap */
+	cur_part->block_bitmap.btmp_addr =\
+	(uint8_t*)sys_malloc(sb_buf->block_bitmap_sects * SECTOR_SIZE);
+	if (cur_part->block_bitmap.btmp_addr == NULL) {
+		PANIC("alloc memory failed\n");	
+	}
+	cur_part->block_bitmap.btmp_bytes_len = sb_buf->block_bitmap_sects * SECTOR_SIZE;
+	ide_read(hd, sb_buf->block_bitmap_lba, cur_part->block_bitmap.btmp_addr, sb_buf->block_bitmap_sects);
+
+	/* read inode bitmap */
+	cur_part->inode_bitmap.btmp_addr =\
+	(uint8_t*)sys_malloc(sb_buf->inode_bitmap_sects * SECTOR_SIZE);
+	if (cur_part->inode_bitmap.btmp_addr == NULL) {
+		PANIC("alloc memory failed\n");			
+	}
+	cur_part->inode_bitmap.btmp_bytes_len = sb_buf->inode_bitmap_sects * SECTOR_SIZE;
+	ide_read(hd, sb_buf->inode_bitmap_lba, cur_part->inode_bitmap.btmp_addr, sb_buf->inode_bitmap_sects);
+
+	list_init(&cur_part->open_inode);
+	
+	printk("mount %s done!\n", part->name);
+
+	return true;
 }
