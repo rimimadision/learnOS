@@ -12,6 +12,13 @@ enum file_types {
 	FT_DIRECTORY
 };
 
+enum oflags {
+	O_RDONLY,
+	O_WRONLY,
+	O_RDWR,
+	O_CREAT = 4
+};
+
 void filesys_init(void);
 
 #endif // __FS_FS_H
