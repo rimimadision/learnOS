@@ -24,4 +24,6 @@ struct file { // file struct in global file table
 	struct inode* fd_inode;
 };
 
+int32_t get_free_slot_in_global(void);
+
 #endif //__FS_FILE_H
