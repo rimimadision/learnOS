@@ -107,7 +107,7 @@ void inode_close(struct inode* inode) {
 	enum intr_status old_status = intr_disable();
 
 	if(--inode->i_open_cnts == 0) {
-		list_remove(&inode_found->inode_tag);
+		list_remove(&inode->inode_tag);
 		struct task_struct* cur = get_cur_thread_pcb(); 
 		uint32_t* cur_pgdir = cur->pgdir;
 		cur->pgdir= NULL;

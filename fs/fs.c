@@ -205,3 +205,7 @@ static bool mount_partition(struct list_elem* pelem, int arg) {
 
 	return true;
 }
+
+static char* path_parser() {
+
+}

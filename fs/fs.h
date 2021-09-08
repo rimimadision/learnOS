@@ -19,6 +19,8 @@ enum oflags {
 	O_CREAT = 4
 };
 
+extern partition* cur_part;
+
 void filesys_init(void);
 
 #endif // __FS_FS_H
