@@ -6,6 +6,8 @@
 #include "bitmap.h"
 #include "interrupt.h"
 #include "super_block.h"
+#include "dir.h"
+#include "memory.h"
 
 struct file file_table[MAX_FILE_OPEN]; // 0, 1, 2 are taken by std_io
 
@@ -93,4 +95,40 @@ void bitmap_sync(struct partition* part, uint32_t bit_idx, enum bitmap_type btmp
 	}
 
 	ide_write(part->my_disk, sec_lba, bitmap_off, 1);
-} 
+}
+
+int32_t file_create(struct dir* parent_dir, char* filename, enum file_types flag) {
+	void* io_buf = sys_malloc(1024);
+	if (io_buf == NULL) {
+		printk("in file_create:sys_malloc for io_buf failed\n");
+		return -1;
+	}
+
+	uint8_t rollback_step = 0;
+	
+	/* alloc inode for new file */
+	int32_t inode_no = inode_bitmap_alloc(cur_part);
+	if (inode_no == -1) {
+		printk("in file_create:alloc inode failed\n");
+		return -1;
+	}	
+	
+	enum intr_status intr_old_status = intr_disable();	
+	struct task_struct* cur = get_cur_thread_pcb(); 
+	uint32_t* cur_pgdir = cur->pgdir;
+	cur->pgdir= NULL;
+	new_file_inode = (struct inode*)sys_malloc(sizeof(struct inode));
+	cur->pgdir = cur_pgdir;
+	intr_set_status(intr_old_status);
+
+	if (new_file_inode == NULL) {
+		printk("file_create:sys_malloc for inode failed\n");
+		rollback_step = 1;	
+		goto rollback;
+	}
+
+	inode_init(inode_no, new_file_inode);
+
+	/* find free slot in file_table */
+	int 
+}

@@ -15,6 +15,7 @@ struct partition* cur_part;
 
 static void partition_format(struct partition* part);
 static bool mount_partition(struct list_elem* pelem, int arg);
+static char* path_parse(char* pathname, char* name_store);
 
 /* initialize partition, create fs in it */
 static void partition_format(struct partition* part) {
@@ -206,6 +207,90 @@ static bool mount_partition(struct list_elem* pelem, int arg) {
 	return true;
 }
 
-static char* path_parser() {
+/* return the child pathname and store parent path in name_store */
+static char* path_parse(char* pathname, char* name_store) {
+	if (pathname[0] == '/') {
+		while(*(++pathname) == '/');
+	}
 
+	while (*pathname != '/' && *pathname != '\0') {
+		*name_store++ = *pathname++;
+	}
+
+	if (pathname[0] == '\0') {
+		return NULL;
+	}
+	return pathname;
+} 
+
+int32_t path_depth_cnt(char* pathname) {
+	ASSERT(pathname != NULL);
+	char* p = pathname;
+	char name[MAX_FILE_NAME_LEN];
+
+	uint32_t depth = 0;
+	p = path_parse(p, name);
+	while (name[0]) {
+		depth++;
+		memset(name, 0, MAX_FILE_NAME_LEN);
+		if (p) {
+			p = path_parse(p, name);
+		}
+	}
+	
+	return depth;
+}
+
+/* return inode_no or -1 */
+static int search_file(const char* pathname, struct path_search_record* searched_record) {
+	if (!strcmp(pathname, "/") || !strcmp(pathname, "/.") || !strcmp(pathname, "/..")) {
+		searched_record->parent_dir = &root_dir;
+		searched_record->file_type = FT_DIRECTORY;
+		searched_record->searched_path[0] = 0;
+
+		return 0;
+	}
+
+	uint32_t path_len = strlen(pathname);
+	ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
+	char* sub_path = (char*)pathname;
+	struct dir* parent_dir = &root_dir;
+	struct dir_entry dir_e;
+
+	char name[MAX_FILE_NAME_LEN] = {0};
+	searched_record->parent_dir = parent_dir;
+	searched_record->file_type = FT_UNKNOWN;
+	uint32_t parent_inode_no = 0;
+
+	sub_path = path_parse(sub_path, name);
+
+	while (name[0]) {
+		ASSERT(strlen(searched_record->searched_path) < MAX_PATH_LEN);
+		strcat(searched_record->searched_path, "/");
+		strcat(searched_record->searched_path, name);
+
+		if (search_dir_entry(cur_part, parent_dir, name, &dir_e)) {
+			memset(name, 0, MAX_FILE_NAME_LEN);
+			if (sub_path) {
+				sub_path = path_parse(sub_path, name);
+			}
+			if(FT_DIRECTORY == dir_e.f_type) {
+				parent_inode_no = parent_dir->inode->i_no;
+				dir_close(parent_dir);
+				parent_dir = dir_open(cur_part, dir_e->i_no);
+				searched_record->parent_dir = parent_dir;
+				continue;
+			} else if (FT_REGULAR == dir_e.f_type) {
+				searched_record->file_type = FT_REGULAR;
+				return dir_e.i_no;
+			}
+		} else { return -1;} // not close parent_dir
+	}
+		
+		/* only dir_name in path */
+		dir_close(searched_record->parent_dir);
+		searched_record->parent_dir = dir_open(cur_part, parent_inode_no);
+		searched_record->file_type = FT_DIRECTORY;
+	
+		return dir_e.i_no;
 }
