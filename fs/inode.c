@@ -1,4 +1,5 @@
 #include "inode.h"
+#include "stdint.h"
 #include "global.h"
 #include "ide.h"
 #include "string.h"
@@ -7,6 +8,7 @@
 #include "memory.h"
 #include "debug.h"
 #include "interrupt.h"
+#include "super_block.h"
 
 struct inode_position {
 	bool two_sec;
@@ -38,7 +40,7 @@ void inode_sync(struct partition* part, struct inode* inode, void* io_buf) {
 	struct inode_position inode_pos;	
 	inode_locate(part, inode_no, &inode_pos);
 	
-	ASSERT(inode_pos->sec_lba < part->sb->data_start_lba);
+	ASSERT(inode_pos.sec_lba < part->sb->data_start_lba);
 	// inode_tag and i_open_cnts will be reset after the file being loaded
 	// so we can choose to clear them when we save inode or reset when we load
 	struct inode pure_inode;
@@ -63,7 +65,7 @@ struct inode* inode_open (struct partition* part, uint32_t inode_no) {
 	struct list_elem* elem = part->open_inode.head.next;
 	struct inode* inode_found;
 
-	while (elem != part->open_inode.tail) {
+	while (elem != &part->open_inode.tail) {
 		inode_found = elem2entry(struct inode, inode_tag, elem);
 		if (inode_found->i_no == inode_no) {
 			inode_found->i_open_cnts++;

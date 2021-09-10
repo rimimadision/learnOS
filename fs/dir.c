@@ -5,6 +5,9 @@
 #include "global.h"
 #include "fs.h"
 #include "inode.h"
+#include "global.h"
+#include "stdio-kernel.h"
+#include "file.h"
 
 struct dir root_dir;
 
@@ -38,7 +41,7 @@ bool search_dir_entry(struct partition* part, struct dir* pdir,\
 	block_idx = 0;
 		
 	if (pdir->inode->i_sectors[12] != 0) {
-		ide_read(part->my_disk, part->inode->i_sectors[12], all_blocks + 12, 1);
+		ide_read(part->my_disk, pdir->inode->i_sectors[12], all_blocks + 12, 1);
 	}
 
 	uint8_t* buf = (uint8_t*)sys_malloc(SECTOR_SIZE);
@@ -150,7 +153,7 @@ bool sync_dir_entry(struct dir* parent_dir, struct dir_entry* p_de, void* io_buf
 				ASSERT(block_bitmap_idx >= 0);
 				bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);
 				all_blocks[12] = block_lba;
-				ide_write(cur_part->disk, dir_inode->i_sectors[12], all_blocks + 12, 1);
+				ide_write(cur_part->my_disk, dir_inode->i_sectors[12], all_blocks + 12, 1);
 			} else {
 				all_blocks[block_idx] = block_lba;
 				ide_write(cur_part->my_disk, dir_inode->i_sectors[12], all_blocks + 12, 1);

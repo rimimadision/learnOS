@@ -10,12 +10,15 @@
 #include "string.h"
 #include "list.h"
 #include "debug.h"
+#include "file.h"
+#include "thread.h"
 
 struct partition* cur_part;
 
 static void partition_format(struct partition* part);
 static bool mount_partition(struct list_elem* pelem, int arg);
 static char* path_parse(char* pathname, char* name_store);
+static uint32_t fd_local2global(uint32_t local_fd);
 
 /* initialize partition, create fs in it */
 static void partition_format(struct partition* part) {
@@ -160,6 +163,17 @@ void filesys_init(void) {
 
 	char default_part[8] = "sdb1";
 	list_traversal(&partition_list, mount_partition, (int)default_part);
+	open_root_dir(cur_part);
+	
+	uint32_t fd_idx = 0;
+	while (fd_idx < MAX_FILE_OPEN) {
+		file_table[fd_idx++].fd_inode = NULL;
+	}
+
+	printk("data_start:%x\n", cur_part->sb->data_start_lba);
+	printk("inode_table:%x\n", cur_part->sb->inode_table_lba);
+	printk("inode_bitmap:%x\n", cur_part->sb->inode_bitmap_lba);
+	printk("inode_size:%x\n", sizeof(struct inode));
 }
 
 static bool mount_partition(struct list_elem* pelem, int arg) {
@@ -277,7 +291,7 @@ static int search_file(const char* pathname, struct path_search_record* searched
 			if(FT_DIRECTORY == dir_e.f_type) {
 				parent_inode_no = parent_dir->inode->i_no;
 				dir_close(parent_dir);
-				parent_dir = dir_open(cur_part, dir_e->i_no);
+				parent_dir = dir_open(cur_part, dir_e.i_no);
 				searched_record->parent_dir = parent_dir;
 				continue;
 			} else if (FT_REGULAR == dir_e.f_type) {
@@ -293,4 +307,76 @@ static int search_file(const char* pathname, struct path_search_record* searched
 		searched_record->file_type = FT_DIRECTORY;
 	
 		return dir_e.i_no;
+}
+
+int32_t sys_open(const char* pathname, uint8_t flags) {
+	if (pathname[strlen(pathname) - 1] == '/') {
+		printk("can't open a directory %s\n", pathname);
+		return -1;
+	}
+	ASSERT(flags <= 7);
+	int32_t fd = -1;
+
+	struct path_search_record searched_record;
+	memset(&searched_record, 0, sizeof(struct path_search_record));
+
+	uint32_t pathname_depth = path_depth_cnt((char*)pathname);
+	
+	int inode_no = search_file(pathname, &searched_record);	
+	bool found = inode_no != -1 ? true : false;
+
+	if (searched_record.file_type == FT_DIRECTORY) {
+		printk("can't open a directory with open(), use opendir() to instead\n");
+		dir_close(searched_record.parent_dir);	
+		return -1;
+	}
+
+	uint32_t path_searched_depth = path_depth_cnt(searched_record.searched_path);
+	
+	if (pathname_depth != path_searched_depth) {
+		printk("cannot access %s:Not a directory, subpath %s is't exists\n", pathname, searched_record.searched_path);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	if (!found && !(flags & O_CREAT)) {
+		printk("in path %s, file %s is't exist\n", searched_record.searched_path, \
+				(strrchr(searched_record.searched_path, '/') + 1));
+		dir_close(searched_record.parent_dir);
+		return -1;
+	} else if (found && (flags & O_CREAT)) {
+		printk("%s has already exsits\n", pathname);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	switch (flags & O_CREAT) {
+		case O_CREAT:
+			printk("creating file\n");
+			fd = file_create(searched_record.parent_dir, (strrchr(pathname, '/') + 1), flags);
+			dir_close(searched_record.parent_dir);
+			break;
+		default:
+			fd = file_open(inode_no, flags);
+			break;
+	}
+
+	return fd;
+}
+
+static uint32_t fd_local2global(uint32_t local_fd) {
+	struct task_struct* cur = get_cur_thread_pcb();
+	int32_t global_fd = cur->fd_table[local_fd];
+	ASSERT(global_fd >= 0 && global_fd < MAX_FILE_OPEN);
+	return (uint32_t)global_fd;
+} 
+
+int32_t sys_close(int32_t fd) {
+	int32_t ret = -1;
+	if (fd > 2) {
+		uint32_t _fd = fd_local2global(fd);
+		ret = file_close(&file_table[_fd]);
+		get_cur_thread_pcb()->fd_table[fd] = -1;
+	}
+	return ret;
 }

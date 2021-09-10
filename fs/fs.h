@@ -1,7 +1,7 @@
 #ifndef __FS_FS_H
 #define __FS_FS_H
 
-#include "dir.h"
+#include "stdint.h"
 
 #define MAX_FILES_PER_PART 4096
 #define BITS_PER_SECTOR 4096
@@ -22,14 +22,17 @@ enum oflags {
 	O_CREAT = 4
 };
 
-extern partition* cur_part;
-
-void filesys_init(void);
-int32_t path_depth_cnt(char* pathname);
 struct path_search_record{
 	char searched_path[MAX_PATH_LEN];
 	struct dir* parent_dir;
 	enum file_types file_type;
 };
+
+extern struct partition* cur_part;
+
+void filesys_init(void);
+int32_t path_depth_cnt(char* pathname);
+int32_t sys_open(const char* pathname, uint8_t flags);
+int32_t sys_close(int32_t fd);
 
 #endif // __FS_FS_H

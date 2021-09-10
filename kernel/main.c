@@ -13,6 +13,7 @@
 #include "stdio.h"
 #include "timer.h"
 #include "ide.h"
+#include "fs.h"
 
 void k_thread_a(void* arg);
 void k_thread_b(void* arg);
@@ -31,6 +32,11 @@ int main(void){
 	//thread_start("k_thread_b", 31, k_thread_b, "argB");
 			
 	intr_enable();
+
+	uint32_t fd = sys_open("/file1", O_RDONLY);
+	printf("fd:%d\n", fd);
+	sys_close(fd);
+	printf("%d closed now\n", fd);
 	while(1);
 	return 0;
 }
