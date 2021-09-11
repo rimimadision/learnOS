@@ -7,7 +7,7 @@
 #include "dir.h"
 
 #define MAX_FILE_OPEN 32
-
+#define MAX_FILE_SECTORS (12 + (512 / 4))
 enum std_fd {
 	stdin_no,
 	stdout_no,
@@ -35,5 +35,6 @@ void bitmap_sync(struct partition* part, uint32_t bit_idx, enum bitmap_type btmp
 int32_t file_create(struct dir* parent_dir, char* filename, enum oflags flag);
 int32_t file_open(uint32_t inode_no, enum oflags flag);
 int32_t file_close(struct file* file);
+int32_t file_write(struct file* file, const void* buf, uint32_t count);
 
 #endif //__FS_FILE_H

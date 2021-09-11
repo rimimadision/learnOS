@@ -49,7 +49,7 @@ $(BUILD_DIR)/syscall-init.o : userprog/syscall-init.c userprog/syscall-init.h li
 $(BUILD_DIR)/fs.o : fs/fs.c fs/fs.h lib/stdint.h kernel/global.h fs/inode.h device/ide.h\
 				    fs/super_block.h fs/dir.h lib/kernel/stdio-kernel.h kernel/memory.h\
 				    lib/string.h lib/kernel/list.h kernel/debug.h fs/file.h\
-		            thread/thread.h 
+		            thread/thread.h device/console.h 
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/file.o : fs/file.c fs/file.h lib/stdint.h kernel/global.h fs/inode.h device/ide.h\

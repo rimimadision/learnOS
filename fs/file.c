@@ -227,7 +227,177 @@ int32_t file_close(struct file* file) {
 }
 
 int32_t file_write(struct file* file, const void* buf, uint32_t count) {
-	if (()) {
-
+	if ((file->fd_inode->i_size + count) > (BLOCK_SIZE * MAX_FILE_SECTORS)) {
+		printk("exceed max file_size 71680 bytes, write file failed\n");
+		return -1;
 	}
+
+	uint8_t* io_buf = sys_malloc(512);
+	if (io_buf == NULL) {
+		printk("file_write:sys_malloc for io_buf failed\n");
+		return -1;
+	}
+	
+	uint32_t* all_blocks = (uint32_t*)sys_malloc(4 * MAX_FILE_SECTORS);
+	if (all_blocks == NULL) {
+		printk("file_write:sys_malloc for all_blocks failed\n");
+		return -1;
+	}
+	memset(all_blocks, 0, 4 * MAX_FILE_SECTORS);
+	
+	const uint8_t* src = buf;
+	uint32_t bytes_written = 0;
+	uint32_t size_left = count;
+	int32_t block_lba = -1;
+	uint32_t block_bitmap_idx = 0;
+
+	uint32_t sec_idx;
+	uint32_t sec_lba;
+	uint32_t sec_off_bytes;
+	uint32_t sec_left_bytes;
+	uint32_t chunk_size; // the size of data written once
+	int32_t indirect_block_table;
+	uint32_t block_idx;
+
+	if (file->fd_inode->i_sectors[0] == 0) { // the file is being written first time
+		block_lba = block_bitmap_alloc(cur_part);
+		if (block_lba == -1) {
+			printk("file_write:block_btmap_alloc failed\n");
+			sys_free(io_buf);
+			sys_free(all_blocks);
+			return -1;
+		}
+		file->fd_inode->i_sectors[0] = block_lba;
+		block_bitmap_idx = block_lba - cur_part->sb->data_start_lba;
+		ASSERT(block_bitmap_idx > 0);
+		bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);	
+	}
+
+	uint32_t file_has_used_blocks = DIV_ROUND_UP(file->fd_inode->i_size, BLOCK_SIZE);
+	uint32_t file_will_use_blocks = DIV_ROUND_UP((file->fd_inode->i_size + count), BLOCK_SIZE);
+	ASSERT(file_will_use_blocks <= MAX_FILE_SECTORS);
+
+	uint32_t add_blocks = file_will_use_blocks - file_has_used_blocks;
+	if (add_blocks == 0) { // no new blocks needed
+		// load blocks_lba into all_blocks[]
+		if (file_will_use_blocks <= 12) {
+			block_idx = file_has_used_blocks - 1;
+			all_blocks[block_idx] = file->fd_inode->i_sectors[block_idx];
+		} else {
+			ASSERT(file->fd_inode->i_sectors[12] != 0);
+			indirect_block_table = file->fd_inode->i_sectors[12];
+			ide_read(cur_part->my_disk, indirect_block_table, all_blocks + 12, 1);
+		}
+	} else { // need new blocks
+		if (file_will_use_blocks <= 12) {
+			block_idx = file_has_used_blocks - 1;
+			ASSERT(file->fd_inode->i_sectors[block_idx] != 0);
+			all_blocks[block_idx] = file->fd_inode->i_sectors[block_idx];
+
+			block_idx++;
+			while (block_idx < file_will_use_blocks) {
+				block_lba = block_bitmap_alloc(cur_part);
+				if (block_lba == -1) {
+					printk("file_write:block_bitmap_alloc for situation 1 failed\n"); // no rollback yet
+					sys_free(io_buf);
+					sys_free(all_blocks);
+					return -1;
+				}
+				ASSERT(file->fd_inode->i_sectors[block_idx] == 0);
+				file->fd_inode->i_sectors[block_idx] = all_blocks[block_idx] = block_lba;
+				block_bitmap_idx = block_lba - cur_part->sb->data_start_lba;	
+				bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);
+				block_idx++;
+			} 
+		} else if (file_has_used_blocks <= 12 && file_will_use_blocks > 12) {
+			block_idx = file_has_used_blocks - 1;
+			all_blocks[block_idx] = file->fd_inode->i_sectors[block_idx];
+	
+			/* create indirect_block_table */
+			block_lba = block_bitmap_alloc(cur_part);	
+			if (block_lba == -1) {
+				printk("file_write:block_bitmap_alloc for situation 2 failed\n");
+				sys_free(io_buf);
+				sys_free(all_blocks);
+				return -1;
+			}
+			ASSERT(file->fd_inode->i_sectors[12] == 0);
+			indirect_block_table = file->fd_inode->i_sectors[12] = block_lba; 
+			block_bitmap_idx = block_lba - cur_part->sb->data_start_lba;	
+			bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);
+			
+			block_idx = file_has_used_blocks;
+			while (block_idx < file_will_use_blocks) {
+				block_lba = block_bitmap_alloc(cur_part);
+				if (block_lba == -1) {
+					printk("file_write:block_bitmap_alloc for situation 2 failed\n");
+					sys_free(io_buf);
+					sys_free(all_blocks);
+					return -1;
+				}
+				if (block_idx < 12) {
+					ASSERT(file->fd_inode->i_sectors[block_idx] == 0);
+					file->fd_inode->i_sectors[block_idx] = all_blocks[block_idx] = block_lba;
+				} else {
+					all_blocks[block_idx] = block_lba; // not sync indirect_block_table temporarily
+				}
+				block_bitmap_idx = block_lba - cur_part->sb->data_start_lba;	
+				bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);
+				block_idx++;
+			}
+			/* sync indirect_block_table */
+			ide_write(cur_part->my_disk, indirect_block_table, all_blocks + 12, 1);
+		} else if (file_has_used_blocks > 12) {
+			ASSERT(file->fd_inode->i_sectors[12] != 0);
+			indirect_block_table = file->fd_inode->i_sectors[12];
+			ide_read(cur_part->my_disk, indirect_block_table, all_blocks + 12, 1);
+			block_idx = file_has_used_blocks;
+			
+			while (block_idx < file_will_use_blocks) {
+				ASSERT(all_blocks[block_idx] == 0);
+				block_lba = block_bitmap_alloc(cur_part);
+				if (block_lba == -1) {
+					printk("file_write:block_bitmap_alloc for situation 3 failed\n");
+					sys_free(io_buf);
+					sys_free(all_blocks);
+					return -1;	
+				}	
+				all_blocks[block_idx++] = block_lba;
+				block_bitmap_idx = block_lba - cur_part->sb->data_start_lba;	
+				bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);
+			}
+
+			ide_write(cur_part->my_disk, indirect_block_table, all_blocks + 12, 1);
+		}
+	}
+
+	bool first_write_block = true;
+	file->fd_pos = file->fd_inode->i_size - 1;
+	
+	while (bytes_written < count) {
+		memset(io_buf, 0, BLOCK_SIZE);
+		sec_idx = file->fd_inode->i_size / BLOCK_SIZE;
+		sec_lba = all_blocks[sec_idx];
+		sec_off_bytes = file->fd_inode->i_size % BLOCK_SIZE;
+		sec_left_bytes = BLOCK_SIZE - sec_off_bytes;
+
+		chunk_size = size_left < sec_left_bytes ? size_left : sec_left_bytes;
+		if (first_write_block) {
+			ide_read(cur_part->my_disk, sec_lba, io_buf, 1);
+			first_write_block = false;
+		}
+
+		memcpy(io_buf + sec_off_bytes, src, chunk_size);
+		ide_write(cur_part->my_disk, sec_lba, io_buf, 1);
+		printk("file write at lba 0x%x\n", sec_lba);
+		src += chunk_size;
+		file->fd_inode->i_size += chunk_size;
+		file->fd_pos += chunk_size;
+		bytes_written += chunk_size;
+		size_left -= chunk_size;
+	}
+	inode_sync(cur_part, file->fd_inode, io_buf);
+	sys_free(all_blocks);
+	sys_free(io_buf);
+	return bytes_written;
 }
