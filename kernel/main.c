@@ -33,8 +33,9 @@ int main(void){
 			
 	intr_enable();
 
-	uint32_t fd = sys_open("/file1", O_RDONLY);
+	uint32_t fd = sys_open("/file2", O_RDWR | O_CREAT);
 	printf("fd:%d\n", fd);
+	//sys_write(fd, "hello_f2\n", 9);
 	sys_close(fd);
 	printf("%d closed now\n", fd);
 	while(1);

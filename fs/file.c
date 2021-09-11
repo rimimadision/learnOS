@@ -68,7 +68,7 @@ int32_t inode_bitmap_alloc(struct partition* part) {
 /* return block_lba */
 int32_t block_bitmap_alloc(struct partition* part) {
 	enum intr_status old_status = intr_disable();	
-	
+		
 	int32_t bit_idx = bitmap_scan(&part->block_bitmap, 1);
 	if (bit_idx == -1) {
 		return -1;
@@ -273,8 +273,8 @@ int32_t file_write(struct file* file, const void* buf, uint32_t count) {
 		bitmap_sync(cur_part, block_bitmap_idx, BLOCK_BITMAP);	
 	}
 
-	uint32_t file_has_used_blocks = DIV_ROUND_UP(file->fd_inode->i_size, BLOCK_SIZE);
-	uint32_t file_will_use_blocks = DIV_ROUND_UP((file->fd_inode->i_size + count), BLOCK_SIZE);
+	uint32_t file_has_used_blocks = file->fd_inode->i_size / BLOCK_SIZE + 1;
+	uint32_t file_will_use_blocks = (file->fd_inode->i_size + count) / BLOCK_SIZE + 1;
 	ASSERT(file_will_use_blocks <= MAX_FILE_SECTORS);
 
 	uint32_t add_blocks = file_will_use_blocks - file_has_used_blocks;
@@ -400,4 +400,49 @@ int32_t file_write(struct file* file, const void* buf, uint32_t count) {
 	sys_free(all_blocks);
 	sys_free(io_buf);
 	return bytes_written;
+}
+
+int32_t file_read(struct file* file, void* buf, uint32_t count) {
+	uint8_t* buf_dst = (uint8_t*)buf;
+	uint32_t size = count, size_left = size;
+
+	if ((file->fd_pos + count) > file->fd_inode->i_size) {
+		size = file->fd_inode->i_size - file->fd_pos;
+		size_left = size;
+		if (size == 0) {
+			return -1;
+		}		
+	}
+
+	uint8_t* io_buf = sys_malloc(BLOCK_SIZE);
+	if (io_buf == NULL) {
+		printk("file_read:sys_malloc for io_buf failed\n");
+	}
+	uint32_t* all_blocks = (uint32_t*)sys_malloc(MAX_FILE_SECTORS * 4);
+	if (all_blocks == NULL) {
+		printk("file_read:sys_malloc for all_blocks failed\n");
+		sys_free(io_buf);
+		return -1
+	}
+	
+	uint32_t block_read_start_idx = file->fd_pos / BLOCK_SIZE;	
+	uint32_t block_read_end_idx = (file->fd_pos + size) / BLOCK_SIZE;
+	uint32_t read_blocks = block_read_end_idx - block_read_start_idx;
+	ASSERT(block_read_start_idx < MAX_FILE_SECTORS && block_read_end_idx < MAX_FILE_SECTORS);
+	
+	int32_t indirect_block_table;
+	uint32_t block_idx;
+
+	if (read_blocks == 0) {
+		ASSERT(block_read_end_idx == block_read_start_idx);
+		if (block_read_end_idx < 12) {
+			block_idx = block_read_end_idx;
+			all_blocks[block_idx] = file->fd_inode->i_sectors[block_idx];
+		} else {
+			
+		}
+
+
+
+	}
 }

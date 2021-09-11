@@ -174,6 +174,7 @@ void filesys_init(void) {
 	printk("data_start:%x\n", cur_part->sb->data_start_lba);
 	printk("inode_table:%x\n", cur_part->sb->inode_table_lba);
 	printk("inode_bitmap:%x\n", cur_part->sb->inode_bitmap_lba);
+	printk("block_bitmap:%x\n", cur_part->sb->block_bitmap_lba);
 	printk("inode_size:%x\n", sizeof(struct inode));
 }
 
