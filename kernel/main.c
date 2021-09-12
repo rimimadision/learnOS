@@ -33,11 +33,26 @@ int main(void){
 			
 	intr_enable();
 
-	uint32_t fd = sys_open("/file2", O_RDWR | O_CREAT);
-	printf("fd:%d\n", fd);
-	//sys_write(fd, "hello_f2\n", 9);
+	uint32_t fd = sys_open("/file1", O_RDWR);
+	printf("open file:fd:%d\n", fd);
+	char buf[64] = {0};
+	int read_bytes = sys_read(fd, buf, 10);
+	printf("1_ read %d bytes:\n%s\n", read_bytes, buf);
+
+	memset(buf, 0, 64);
+	read_bytes = sys_read(fd, buf, 15);
+	printf("2_ read %d bytes:\n%s\n", read_bytes, buf);
+
+	memset(buf, 0, 64);
+	read_bytes = sys_read(fd, buf, 10);
+	printf("3_ read %d bytes:\n%s\n", read_bytes, buf);
 	sys_close(fd);
-	printf("%d closed now\n", fd);
+
+	fd = sys_open("/file1", O_RDWR);
+	memset(buf, 0, 64);
+	read_bytes = sys_read(fd, buf, 100);
+	printf("4_ read %d bytes:\n%s\n", read_bytes, buf);
+	sys_close(fd);
 	while(1);
 	return 0;
 }
