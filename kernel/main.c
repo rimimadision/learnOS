@@ -30,31 +30,18 @@ int main(void){
 	
 	//thread_start("k_thread_a", 31, k_thread_a, "argA");
 	//thread_start("k_thread_b", 31, k_thread_b, "argB");
-			
 	intr_enable();
-
-//	uint32_t fd = sys_open("/file1", O_RDWR);
-//	printf("open file:fd:%d\n", fd);
-//	char buf[64] = {0};
-//	int read_bytes = sys_read(fd, buf, 10);
-//	printf("1_ read %d bytes:\n%s\n", read_bytes, buf);
-//
-//	memset(buf, 0, 64);
-//	read_bytes = sys_read(fd, buf, 15);
-//	printf("2_ read %d bytes:\n%s\n", read_bytes, buf);
-//
-//	memset(buf, 0, 64);
-//	read_bytes = sys_read(fd, buf, 10);
-//	printf("3_ read %d bytes:\n%s\n", read_bytes, buf);
-//	sys_close(fd);
-//
-//	fd = sys_open("/file1", O_RDWR);
-//	sys_lseek(fd, 1, SEEK_SET);
-//	memset(buf, 0, 64);
-//	read_bytes = sys_read(fd, buf, 100);
-//	printf("4_ read %d bytes:\n%s\n", read_bytes, buf);
-//	sys_close(fd);
-//	printf("%d", sys_unlink("/file1"));
+	//printk("/dir1/subdir1 create %s \n",sys_mkdir("/dir1/subdir1") == 0 ? "done" : "fail");
+	//printk("/dir1 create %s \n",sys_mkdir("/dir1") == 0 ? "done" : "fail");
+	//printk("/dir1/subdir1 create %s \n",sys_mkdir("/dir1/subdir1") == 0 ? "done" : "fail");
+	
+	int fd = sys_open("/dir1/subdir1/file2", O_RDWR);
+	sys_lseek(fd, 0, SEEK_SET);
+	char buf[32] = {0};
+	sys_read(fd, buf, 10);
+	printk("/dir1/subdir1/file2 says:\n%s\n", buf);
+	sys_close(fd);
+	
 	
 	while(1);
 	return 0;

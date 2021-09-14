@@ -176,7 +176,6 @@ void filesys_init(void) {
 	printk("inode_bitmap:%x\n", cur_part->sb->inode_bitmap_lba);
 	printk("block_bitmap:%x\n", cur_part->sb->block_bitmap_lba);
 	printk("inode_size:%x\n", sizeof(struct inode));
-	inode_release(cur_part, 1);
 }
 
 static bool mount_partition(struct list_elem* pelem, int arg) {
@@ -511,19 +510,19 @@ int32_t sys_mkdir(const char* pathname) {
 	}
 
 	struct path_search_record searched_record;
-	memset(&searched_record, 0, sizeof(path_search_record));
+	memset(&searched_record, 0, sizeof(struct path_search_record));
 	int inode_no = search_file(pathname, &searched_record);
 	if (inode_no != -1) {
 		printk("sys_mkdir:file or directory %s exist\n", pathname);
 		rollback_step = 1;
-		goto rollback_step;
+		goto rollback;
 	} else {
 		uint32_t pathname_depth = path_depth_cnt((char*)pathname);
 		uint32_t path_searched_depth = path_depth_cnt(searched_record.searched_path);
 		if (pathname_depth != path_searched_depth) {
 			printk("sys_mkdir:cannot access %s:not a directory, subpath %s isn't exist\n", pathname, searched_record.searched_path);
 			rollback_step = 1;
-			goto rollback_step;
+			goto rollback;
 		} 
 	}	
 	
@@ -531,10 +530,10 @@ int32_t sys_mkdir(const char* pathname) {
 	char* dirname = strrchr(searched_record.searched_path, '/') + 1;
 	
 	inode_no = inode_bitmap_alloc(cur_part);
-	if (inode == -1) {
+	if (inode_no == -1) {
 		printk("sys_mkdir:alloc inode failed\n");
 		rollback_step = 1;
-		goto rollback_step;
+		goto rollback;
 	}	
 	struct inode new_dir_inode;
 	inode_init(inode_no, &new_dir_inode);
@@ -545,7 +544,7 @@ int32_t sys_mkdir(const char* pathname) {
 	if (block_lba == -1) {
 		printk("sys_mkdir:block_bitmap_alloc for create directory failed\n");
 		rollback_step = 2;
-		goto rollback_step;
+		goto rollback;
 	}
 	new_dir_inode.i_sectors[0] = block_lba;
 	block_bitmap_idx = block_lba - cur_part->sb->data_start_lba;
@@ -561,19 +560,19 @@ int32_t sys_mkdir(const char* pathname) {
 	memcpy(p_de->filename, "..", 2);
 	p_de->i_no = parent_dir->inode->i_no;
 	p_de->f_type = FT_DIRECTORY;
-	ide_write(cur->part, new_dir_inode.i_sectors[0], io_buf, 1);
+	ide_write(cur_part->my_disk, new_dir_inode.i_sectors[0], io_buf, 1);
 
 	new_dir_inode.i_size = 2 * cur_part->sb->dir_entry_size;
 	
 	/* add to parent directory */
 	struct dir_entry new_dir_entry;
-	memset(&new_dir_entry, 0, sizeof(dir_entry));
+	memset(&new_dir_entry, 0, sizeof(struct dir_entry));
 	create_dir_entry(dirname, inode_no, FT_DIRECTORY, &new_dir_entry);
 	memset(io_buf, 0, SECTOR_SIZE * 2);
 	if (!sync_dir_entry(parent_dir, &new_dir_entry, io_buf)) {
 		printk("sys_mkdir:sync_dir_entry to disk failed\n");
 		rollback_step = 2;
-		goto rollback_step;
+		goto rollback;
 	}
 
 	memset(io_buf, 0, SECTOR_SIZE * 2);
@@ -597,4 +596,16 @@ rollback:
 }
 	sys_free(io_buf);
 	return -1;
+}
+
+struct dir* sys_opendir(const char* name) {
+	ASSERT(strlen(name) < MAX_PATH_LEN);
+	
+	/* check if root_dir */
+	if (name[0] == '/' && name[1] == 0) {
+		return &root_dir;
+	}
+
+	
+	
 }
