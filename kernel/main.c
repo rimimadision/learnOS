@@ -14,6 +14,7 @@
 #include "timer.h"
 #include "ide.h"
 #include "fs.h"
+#include "dir.h"
 
 void k_thread_a(void* arg);
 void k_thread_b(void* arg);
@@ -35,13 +36,24 @@ int main(void){
 	//printk("/dir1 create %s \n",sys_mkdir("/dir1") == 0 ? "done" : "fail");
 	//printk("/dir1/subdir1 create %s \n",sys_mkdir("/dir1/subdir1") == 0 ? "done" : "fail");
 	
-	int fd = sys_open("/dir1/subdir1/file2", O_RDWR);
-	sys_lseek(fd, 0, SEEK_SET);
-	char buf[32] = {0};
-	sys_read(fd, buf, 10);
-	printk("/dir1/subdir1/file2 says:\n%s\n", buf);
-	sys_close(fd);
-	
+	struct dir* p_dir = sys_opendir("/dir1/subdir1");
+	if (p_dir) {
+		printk("/dir1/subdir1 opened\n");
+		char* type =NULL;
+		struct dir_entry* dir_e;
+		while ((dir_e = sys_readdir(p_dir)) != NULL) {
+			if(dir_e->f_type == FT_REGULAR) {
+				type = "regular";
+			} else {
+				type = "directory";
+			}
+
+			printf("%s %s\n", type, dir_e->filename);
+		}
+		if (sys_closedir(p_dir) == 0) {
+			printk("closed\n");
+		}
+	}	
 	
 	while(1);
 	return 0;
