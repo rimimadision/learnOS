@@ -329,3 +329,30 @@ struct dir_entry* dir_read(struct dir* dir) {
 	}
 	return NULL;
 }
+
+bool dir_is_empty(struct dir* dir) {
+	return (dir->inode->i_size == cur_part->sb->dir_entry_size * 2);
+}
+
+int32_t dir_remove(struct dir* parent_dir, struct dir* child_dir) {
+	struct inode* child_dir_inode = child_dir->inode;
+	int32_t block_idx = 1;
+	/* empty directory can only have one with . and .. */
+	ASSERT(dir_is_empty(child_dir));
+	while (block_idx < 13) {
+		ASSERT(child_dir_inode->i_sectors[block_idx++] == 0);
+	}
+
+	void* io_buf = sys_malloc(SECTOR_SIZE * 2);
+	if (io_buf == NULL) {
+		printk("dir_remove:malloc for io_buf failed\n");
+		return -1;
+	}
+
+	delete_dir_entry(cur_part, parent_dir, child_dir_inode->i_no, io_buf);
+	
+	inode_release(cur_part, child_dir_inode->i_no);
+	sys_free(io_buf);
+
+	return 0;
+}
