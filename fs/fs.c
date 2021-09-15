@@ -20,6 +20,8 @@ static void partition_format(struct partition* part);
 static bool mount_partition(struct list_elem* pelem, int arg);
 static char* path_parse(char* pathname, char* name_store);
 static uint32_t fd_local2global(uint32_t local_fd);
+static uint32_t get_parent_dir_inode_nr(uint32_t child_inode_nr, void* io_buf);
+static int get_child_dir_name(uint32_t p_inode_nr, uint32_t c_inode_nr, char* path, void* io_buf);
 
 /* initialize partition, create fs in it */
 static void partition_format(struct partition* part) {
@@ -125,6 +127,10 @@ void filesys_init(void) {
 	if (sb_buf == NULL) {
 		PANIC("\nalloc memory failed\n");
 	}
+
+	// debug
+	printk("1:%d, 2:%d", channels[0].devices[1].prim_parts[0].sec_cnt, channels[0].devices[1].prim_parts[1].sec_cnt);
+
 	printk("\nsearching filesystem......\n");
 	while (channel_no < channel_cnt) {
 		dev_no = 0;
@@ -144,7 +150,7 @@ void filesys_init(void) {
 				
 				if (part->sec_cnt != 0) {
 					memset(sb_buf, 0, SECTOR_SIZE);
-					printk("%d\n", part->start_lba);
+					//if (part_idx > 0) {part_idx++;continue;} // I can't fix bug with load more than one partition
 					ide_read(hd, part->start_lba + 1, sb_buf, 1);
 
 					if (sb_buf->magic == 0x19700505) {
@@ -172,6 +178,7 @@ void filesys_init(void) {
 		file_table[fd_idx++].fd_inode = NULL;
 	}
 
+	printk("1:%d, 2:%d", channels[0].devices[1].prim_parts[0].sec_cnt, channels[0].devices[1].prim_parts[1].sec_cnt);
 	printk("data_start:%x\n", cur_part->sb->data_start_lba);
 	printk("inode_table:%x\n", cur_part->sb->inode_table_lba);
 	printk("inode_bitmap:%x\n", cur_part->sb->inode_bitmap_lba);
@@ -668,4 +675,54 @@ int32_t sys_rmdir(const char* pathname) {
 
 	dir_close(searched_record.parent_dir);
 	return retval;
+}
+
+static uint32_t get_parent_dir_inode_nr(uint32_t child_inode_nr, void* io_buf) {
+	struct inode* child_dir_inode = inode_open(cur_part, child_inode_nr);
+	uint32_t block_lba = child_dir_inode->i_sectors[0];
+	ASSERT(block_lba >= cur_part->sb->data_start_lba);
+	inode_close(child_dir_inode);
+	ide_read(cur_part->my_disk, block_lba, io_buf, 1);
+	struct dir_entry* dir_e = (struct dir_entry*)io_buf;
+	ASSERT(dir_e[1].i_no < 4096 && dir_e[1].f_type == FT_DIRECTORY);
+	return dir_e[1].i_no;
+}
+
+static int get_child_dir_name(uint32_t p_inode_nr, uint32_t c_inode_nr, char* path, void* io_buf) {
+	struct inode* parent_dir_inode = inode_open(cur_part, p_inode_nr);
+	uint8_t block_idx = 0;
+	uint32_t all_blocks[140] = {0}, block_cnt = 12;
+	while (block_idx < 12) {
+		all_blocks[block_idx] = parent_dir_inode->i_sectors[block_idx];
+		block_idx++;
+	}
+	if (parent_dir_inode->i_sectors[12]) {
+		ide_read(cur_part->my_disk, parent_dir_inode->i_sectors[12], all_blocks + 12, 1);
+		block_cnt = 140;
+	}
+
+	inode_close(parent_dir_inode);
+	
+	struct dir_entry* dir_e = (struct dir_entry*)io_buf;
+	uint32_t dir_entry_size = cur_part->sb->dir_entry_size;
+	uint32_t dir_entrys_per_sec = (512 / dir_entry_size);
+	block_idx = 0;
+	
+	while (block_idx < block_cnt) {
+		if (all_blocks[block_idx]) {
+			ide_read(cur_part->my_disk, all_blocks[block_idx], io_buf, 1);
+			uint8_t dir_e_idx = 0;
+			while (dir_e_idx < dir_entrys_per_sec) {
+				if ((dir_e + dir_e_idx)->i_no == c_inode_nr) {
+					strcat(path, "/");
+					strcat(path, (dir_e + dir_e_idx)->filename);
+					return 0;
+				}
+				dir_e_idx++;
+			}
+		}
+		block_idx++;
+	}
+
+	return -1;
 }

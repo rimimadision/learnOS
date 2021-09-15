@@ -39,6 +39,7 @@ int main(void){
 	//sys_mkdir("/dir1/subdir1");
 	struct dir* pdir = sys_opendir("/dir1");
 	struct dir_entry* dir_e = NULL;
+	sys_rmdir("/dir1/subdir1");
 	while ((dir_e = sys_readdir(pdir))) {
 		printf("%s\n", dir_e->filename);
 	}
