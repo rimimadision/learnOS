@@ -36,16 +36,16 @@ int main(void){
 	//printk("/dir1 create %s \n",sys_mkdir("/dir1") == 0 ? "done" : "fail");
 	//printk("/dir1/subdir1 create %s \n",sys_mkdir("/dir1/subdir1") == 0 ? "done" : "fail");
 	
-	sys_mkdir("/dir1");
-	char cwd_buf[32] = {0};
-	sys_getcwd(cwd_buf, 32);
-	printf("1: %s\n", cwd_buf);
-	sys_chdir("/dir1");
-	sys_getcwd(cwd_buf, 32);
-	printf("2: %s\n", cwd_buf);
-	struct stat obj_stat;
-	sys_stat("/dir1", &obj_stat);
-	printf("/dir1's info\n i_no:%d\n size:%d\n filetype:%s\n", obj_stat.st_ino, obj_stat.st_size, obj_stat.st_filetype == 2 ? "dir" : "file");
+//	sys_mkdir("/dir1");
+//	char cwd_buf[32] = {0};
+//	sys_getcwd(cwd_buf, 32);
+//	printf("1: %s\n", cwd_buf);
+//	sys_chdir("/dir1");
+//	sys_getcwd(cwd_buf, 32);
+//	printf("2: %s\n", cwd_buf);
+//	struct stat obj_stat;
+//	sys_stat("/dir1", &obj_stat);
+//	printf("/dir1's info\n i_no:%d\n size:%d\n filetype:%s\n", obj_stat.st_ino, obj_stat.st_size, obj_stat.st_filetype == 2 ? "dir" : "file");
 	
 	//struct dir* pdir = sys_opendir("/dir1");
 	//struct dir_entry* dir_e = NULL;
@@ -157,5 +157,15 @@ void u_prog_b() {
 	free(addr2);
 	free(addr3);	
 	
+	while(1);
+}
+
+void init(void) {	
+	uint32_t ret_pid = fork();
+	if (ret_pid) {
+		while(1){printf("I am father, my pid is %d, child pid is %d\n", getpid(), ret_pid);}
+	} else {
+		while(1){printf("I am child, my pid is %d, ret pid is %d\n", getpid(), ret_pid);}
+	}
 	while(1);
 }

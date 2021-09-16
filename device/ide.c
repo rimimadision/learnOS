@@ -341,7 +341,6 @@ static void partition_scan(struct disk* hd, uint32_t ext_lba) {
 				ASSERT(p->fs_type == 0x83);
 				hd->prim_parts[p_no].start_lba = ext_lba + p->start_lba;
 				hd->prim_parts[p_no].sec_cnt = p->sec_cnt;
-				printk("pp:%d\n", p->sec_cnt);
 				hd->prim_parts[p_no].my_disk = hd;
 				list_append(&partition_list, &hd->prim_parts[p_no].part_tag);
 				sprintf(hd->prim_parts[p_no].name, "%s%d", hd->name, p_no + 1);

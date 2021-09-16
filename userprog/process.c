@@ -13,7 +13,6 @@
 
 extern void intr_exit(void);
 
-uint32_t* create_page_dir(void);
 void create_user_vaddr_bitmap(struct task_struct* user_prog);
 
 void start_process(void* filename_) {

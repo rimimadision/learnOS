@@ -519,3 +519,17 @@ void sys_free(void* ptr) {
 	}
 	lock_release(&mem_pool->lock);
 }
+
+void* get_a_page_without_opvaddrbitmap(enum pool_flags pf, uint32_t vaddr) {
+	struct paddr_pool* mem_pool = pf & PF_KERNEL ? &k_p_pool : &u_p_pool;
+	lock_acquire(&mem_pool->lock);
+	void* page_phyaddr = palloc(mem_pool);
+	if (page_phyaddr == NULL) {
+		lock_release(&mem_pool);
+		return NULL;
+	}
+	page_table_add((void*)vaddr, page_phyaddr);
+	lock_release(&mem_pool->lock);
+	
+	return (void*)vaddr;
+}

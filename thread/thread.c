@@ -109,6 +109,7 @@ void init_thread(struct task_struct* pthread, char* name, int prio)
 		fd_idx++;
 	}
 	pthread->cwd_inode_nr = 0;
+	pthread->parent_pid = -1;
 	pthread->stack_magic = 0x19700505;
 }
 
@@ -174,6 +175,7 @@ void thread_init(void)
 	list_init(&thread_ready_list);
 	list_init(&thread_all_list);
 	lock_init(&pid_lock);
+	process_execute(init, "init");
 	make_main_thread();
 	idle_thread = thread_start("idle", 10, idle, NULL);
 	put_str("thread_init done\n");
@@ -218,4 +220,8 @@ void thread_yield(void) {
 	cur_thread->status = TASK_READY;
 	schedule();
 	intr_set_status(old_status);	
+}
+
+pid_t fork_pid() {
+	return allocate_pid();
 }
