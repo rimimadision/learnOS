@@ -104,6 +104,7 @@ struct task_struct
 					 // virtual space, if task is a thread, then set pgdir = NULL)
 	struct vaddr_pool userprog_vaddr;
 	struct mem_block_desc u_block_desc[DESC_CNT]; 
+	uint32_t cwd_inode_nr;
 	uint32_t stack_magic; // 0x19700505
 };
 

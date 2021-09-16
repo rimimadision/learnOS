@@ -36,13 +36,23 @@ int main(void){
 	//printk("/dir1 create %s \n",sys_mkdir("/dir1") == 0 ? "done" : "fail");
 	//printk("/dir1/subdir1 create %s \n",sys_mkdir("/dir1/subdir1") == 0 ? "done" : "fail");
 	
-	//sys_mkdir("/dir1/subdir1");
-	struct dir* pdir = sys_opendir("/dir1");
-	struct dir_entry* dir_e = NULL;
-	sys_rmdir("/dir1/subdir1");
-	while ((dir_e = sys_readdir(pdir))) {
-		printf("%s\n", dir_e->filename);
-	}
+	sys_mkdir("/dir1");
+	char cwd_buf[32] = {0};
+	sys_getcwd(cwd_buf, 32);
+	printf("1: %s\n", cwd_buf);
+	sys_chdir("/dir1");
+	sys_getcwd(cwd_buf, 32);
+	printf("2: %s\n", cwd_buf);
+	struct stat obj_stat;
+	sys_stat("/dir1", &obj_stat);
+	printf("/dir1's info\n i_no:%d\n size:%d\n filetype:%s\n", obj_stat.st_ino, obj_stat.st_size, obj_stat.st_filetype == 2 ? "dir" : "file");
+	
+	//struct dir* pdir = sys_opendir("/dir1");
+	//struct dir_entry* dir_e = NULL;
+	//sys_rmdir("/dir1/subdir1");
+	//while ((dir_e = sys_readdir(pdir))) {
+	//	printf("%s\n", dir_e->filename);
+	//}
 	//sys_open("/dir1/subdir1/file1", O_CREAT);
 //	if (p_dir) {
 //		printk("/dir1/subdir1 opened\n");
