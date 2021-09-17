@@ -38,7 +38,7 @@ static void wakeup(struct task_struct** waiter) {
 
 char ioq_getchar(struct ioqueue* ioq) {
 	ASSERT(intr_get_status() == INTR_OFF);
-	
+		
 	while(ioq_empty(ioq)) {
 		lock_acquire(&ioq->lock);
 		ioq_wait(&ioq->consumer);

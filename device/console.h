@@ -9,5 +9,6 @@ void console_release(void);
 void console_put_str(char* str);
 void console_put_char(uint8_t char_asci);
 void console_put_int(uint32_t num);
+void sys_putchar(char char_asci);
 
 #endif // __DEVICE_CONSOLE_H 

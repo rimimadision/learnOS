@@ -11,6 +11,8 @@
 #include "ide.h"
 #include "fs.h"
 
+bool init_done = false;
+
 void init_all()
 {
 	put_str("\ninit_all\n");
@@ -24,5 +26,6 @@ void init_all()
 	syscall_init();
 	ide_init();
 	filesys_init();
+	init_done = true;
 	put_str("init_all done\n");
 } 

@@ -10,12 +10,13 @@ LIB = -I lib/ \
 	  -I device/ \
 	  -I thread/ \
 	  -I userprog/ \
-	  -I fs/
+	  -I fs/\
+	  -I shell/
 ASFLAGS = -f elf
 CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
-OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o      $(BUILD_DIR)/stdio.o\
-	   $(BUILD_DIR)/fork.o\
+OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o\
+       $(BUILD_DIR)/shell.o        $(BUILD_DIR)/stdio.o     $(BUILD_DIR)/fork.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o   $(BUILD_DIR)/fs.o\
 	   $(BUILD_DIR)/file.o         $(BUILD_DIR)/inode.o     $(BUILD_DIR)/dir.o\
        $(BUILD_DIR)/stdio-kernel.o $(BUILD_DIR)/ide.o\
@@ -35,7 +36,11 @@ $(BUILD_DIR)/init.o : kernel/init.c kernel/init.h lib/kernel/print.h userprog/ts
 					  lib/stdint.h kernel/interrupt.h device/timer.h device/console.h userprog/syscall-init.h device/ide.h
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/stdio.o : lib/stdio.c lib/stdio.h kernel/global.h lib/user/syscall.c lib/stdint.h\
+$(BUILD_DIR)/shell.o : shell/shell.c shell/shell.h lib/stdio.h kernel/global.h\
+                       lib/stdint.h lib/string.h fs/file.h kernel/debug.h
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/stdio.o : lib/stdio.c lib/stdio.h kernel/global.h lib/user/syscall.h lib/stdint.h\
 					   lib/string.h 
 	$(CC) $(CFLAGS) $< -o $@
 
