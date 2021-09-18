@@ -20,7 +20,6 @@ struct partition* cur_part;
 
 static void partition_format(struct partition* part);
 static bool mount_partition(struct list_elem* pelem, int arg);
-static char* path_parse(char* pathname, char* name_store);
 static uint32_t fd_local2global(uint32_t local_fd);
 static uint32_t get_parent_dir_inode_nr(uint32_t child_inode_nr, void* io_buf);
 static int get_child_dir_name(uint32_t p_inode_nr, uint32_t c_inode_nr, char* path, void* io_buf);
@@ -234,7 +233,7 @@ static bool mount_partition(struct list_elem* pelem, int arg) {
 }
 
 /* return the child pathname and store parent path in name_store */
-static char* path_parse(char* pathname, char* name_store) {
+char* path_parse(char* pathname, char* name_store) {
 	if (pathname[0] == '/') {
 		while(*(++pathname) == '/');
 	}
