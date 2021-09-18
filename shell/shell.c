@@ -10,12 +10,10 @@
 #include "ioqueue.h"
 #include "keyboard.h"
 
-#define cmd_len 128
 
 static char cmd_line[cmd_len] = {0};
-char cwd_cache[64] = {0};
+char cwd_cache[15] = {0};
 char* argv[MAX_ARG_NR];
-char* final_path[cmd_len];
 int32_t argc = -1;
 
 static int32_t cmd_parse(char* cmd_str, char** argv, char token);
@@ -41,18 +39,6 @@ static void readline(char* buf, int32_t count) {
 					//putchar('\b');
 				}
 				break;
-			case 'l' - 'a':
-				*pos = 0;
-				clear();
-				print_prompt();
-				printf("%s", buf);
-				break;
-			case 'u' - 'a':
-				while (buf != pos) {
-					putchar('\b');
-					*(pos--) = 0;
-				}
-				break;
 			default: 
 				//putchar(*pos);
 				pos++;
@@ -66,7 +52,6 @@ void my_shell(void) {
 	cwd_cache[0] = '/';
 	while(1) {
 		print_prompt();
-		memset(final_path, 0, cmd_len);
 		memset(cmd_line, 0, cmd_len);
 		readline(cmd_line, cmd_len);
 		if (cmd_line[0] == 0) {
@@ -80,13 +65,22 @@ void my_shell(void) {
 			continue;
 		}
 		
-		int32_t arg_idx = 0;
-		while (arg_idx < argc) {
-			printf("%s/", argv[arg_idx]);
-			arg_idx++;
+		if (!strcmp("pwd", argv[0])) {
+			char buf[MAX_PATH_LEN];
+			getcwd(buf, MAX_PATH_LEN);	
+			printf("%s\n", buf);
+		} else if (!strcmp("ps", argv[0])) {
+			ps();
+		} else if (!strcmp("clear", argv[0])) {
+			clear();
+		} else if (!strcmp("cd", argv[0])) {
+			chdir(argv[1]);
+			getcwd(cwd_cache, 15);
+		} else {
+			printf("not known command\n");
 		}
-		printf("\n");
-	}	
+	
+	}
 	PANIC("my_shell: should not be here");
 }
 

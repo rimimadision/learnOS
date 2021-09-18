@@ -58,6 +58,6 @@ void sys_rewinddir(struct dir* dir);
 int32_t sys_chdir(const char* path);
 char* sys_getcwd(char* buf, uint32_t size);
 int32_t sys_stat(const char* path, struct stat* buf);
-static char* path_parse(char* pathname, char* name_store);
+char* path_parse(char* pathname, char* name_store);
 
 #endif // __FS_FS_H

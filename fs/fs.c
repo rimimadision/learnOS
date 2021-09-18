@@ -54,8 +54,8 @@ static void partition_format(struct partition* part) {
 	sb.root_inode_no = 0;
 	sb.dir_entry_size = sizeof(struct dir_entry);
 
-	printk("\n%s info\n", part->name);
-	printk("    magic:0x%x\n    part_lba_base:0x%x\n    all_sectors:0x%x\n    inode_cnt:0x%x\n"\
+	//printk("\n%s info\n", part->name);
+	//printk("    magic:0x%x\n    part_lba_base:0x%x\n    all_sectors:0x%x\n    inode_cnt:0x%x\n"\
            "    block_bitmap_lba:0x%x\n    block_bitmap_sectors:0x%x\n    inode_bitmap_lba:0x%x\n"\
            "    inode_bitmap_sectors:0x%x\n    inode_table_lba:0x%x\n    inode_table_sectors:0x%x\n"\
            "    data_start_lba:0x%x\n", sb.magic, sb.part_lba_base, sb.sec_cnt, sb.inode_cnt,\
@@ -65,7 +65,7 @@ static void partition_format(struct partition* part) {
 	struct disk* hd = part->my_disk;
 	
 	ide_write(hd, part->start_lba + 1, &sb, 1);
-	printk("    super_block_lba:0x%x\n", part->start_lba + 1);
+	//printk("    super_block_lba:0x%x\n", part->start_lba + 1);
 
 	uint32_t buf_size = (sb.block_bitmap_sects >= sb.inode_bitmap_sects) ? sb.block_bitmap_sects : sb.inode_bitmap_sects;	
 	buf_size = ((buf_size >= sb.inode_table_sects) ? buf_size : sb.inode_table_sects) * SECTOR_SIZE;
@@ -114,7 +114,7 @@ static void partition_format(struct partition* part) {
 
 	ide_write(hd, sb.data_start_lba, buf, 1);
 	
-	printk("    root_dir_lba:0x%x\n", sb.data_start_lba);
+	//printk("    root_dir_lba:0x%x\n", sb.data_start_lba);
 	
 	sys_free(buf);
 	printk("%s format done\n", part->name);
@@ -437,7 +437,6 @@ int32_t sys_read(int32_t fd, void* buf, uint32_t count) {
 		uint32_t _fd = fd_local2global(fd);
 		ret = file_read(&file_table[_fd], buf, count);
 	}
-	
 	return ret;
 }
 

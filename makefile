@@ -15,8 +15,8 @@ LIB = -I lib/ \
 ASFLAGS = -f elf
 CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
-OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o\
-       $(BUILD_DIR)/shell.o        $(BUILD_DIR)/stdio.o     $(BUILD_DIR)/fork.o\
+OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o      $(BUILD_DIR)/shell.o\
+       $(BUILD_DIR)/stdio.o        $(BUILD_DIR)/fork.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o   $(BUILD_DIR)/fs.o\
 	   $(BUILD_DIR)/file.o         $(BUILD_DIR)/inode.o     $(BUILD_DIR)/dir.o\
        $(BUILD_DIR)/stdio-kernel.o $(BUILD_DIR)/ide.o\
