@@ -21,9 +21,8 @@ int main(void){
 	
 	init_all();
 	intr_enable();
-	init_done = true;
 	cls_screen();
-	//console_put_str("[rabbit@localhost /]$ ");	
+	init_done = true;
 	while(1);
 	return 0;
 }

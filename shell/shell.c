@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "list.h"
 #include "stdio.h"
 #include "debug.h"
 #include "file.h"
@@ -9,10 +10,12 @@
 #include "fs.h"
 #include "ioqueue.h"
 #include "keyboard.h"
+#include "buildin_cmd.h"
 
 
 static char cmd_line[cmd_len] = {0};
-char cwd_cache[15] = {0};
+char final_path[MAX_PATH_LEN] = {0};
+char cwd_cache[MAX_PATH_LEN] = {0};
 char* argv[MAX_ARG_NR];
 int32_t argc = -1;
 
@@ -31,16 +34,13 @@ static void readline(char* buf, int32_t count) {
 			case '\n':
 			case '\r':
 				*pos = 0;
-				//putchar('\n');
 				return;
 			case '\b':
 				if (buf[0] != '\b') {
 					pos--;
-					//putchar('\b');
 				}
 				break;
 			default: 
-				//putchar(*pos);
 				pos++;
 		}
 	}
@@ -53,6 +53,7 @@ void my_shell(void) {
 	while(1) {
 		print_prompt();
 		memset(cmd_line, 0, cmd_len);
+		memset(final_path, 0, MAX_PATH_LEN);
 		readline(cmd_line, cmd_len);
 		if (cmd_line[0] == 0) {
 			continue;
@@ -66,18 +67,26 @@ void my_shell(void) {
 		}
 		
 		if (!strcmp("pwd", argv[0])) {
-			char buf[MAX_PATH_LEN];
-			getcwd(buf, MAX_PATH_LEN);	
-			printf("%s\n", buf);
+			buildin_pwd(argc, argv);
 		} else if (!strcmp("ps", argv[0])) {
-			ps();
+			buildin_ps(argc, argv);
 		} else if (!strcmp("clear", argv[0])) {
-			clear();
+			buildin_clear(argc, argv);
 		} else if (!strcmp("cd", argv[0])) {
-			chdir(argv[1]);
-			getcwd(cwd_cache, 15);
+			if (buildin_cd(argc, argv) != NULL) {
+				memset(cwd_cache, 0, MAX_PATH_LEN);
+				strcpy(cwd_cache, final_path);
+			}
+		} else if (!strcmp("ls", argv[0])) {
+			buildin_ls(argc, argv);
+		} else if (!strcmp("mkdir", argv[0])){
+			buildin_mkdir(argc, argv);
+		} else if (!strcmp("rmdir", argv[0])){
+			buildin_rmdir(argc, argv);
+		} else if (!strcmp("rm", argv[0])){
+			buildin_rm(argc, argv);
 		} else {
-			printf("not known command\n");
+			printf("not known command\n");	
 		}
 	
 	}
