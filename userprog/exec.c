@@ -2,6 +2,7 @@
 #include "stdint.h"
 #include "memory.h"
 #include "global.h"
+#include "fs.h"
 
 extern void intr_exit(void);
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
@@ -85,5 +86,30 @@ static bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t 
 }
 
 static int32_t load(const char* pathname) {
+	int32_t ret = -1;
+	struct Elf32_Ehdr elf_header;
+	struct Elf32_Phdr prog_header;
+	memset(&elf_header, 0, sizeof(struct Elf32_Ehdr));
+
+	int32_t fd = sys_open(pathname, O_RDONLY);	
+	if (fd == -1) {
+		printk("open %s failed\n", pathname);
+		return -1;
+	}
+
+	if (sys_read(fd, &elf_header, sizeof(struct Elf32_Ehdr)) != sizeof(struct Elf32_Ehdr)) {
+		ret = -1;
+		goto done;
+	}
+
+	if (memcmp(elf_header.e_ident, "\177ELF\1\1\1", 7)\
+        || elf_header.e_type != 2\
+        || elf_header.e_machine != 3\
+		|| elf_header.e_version != 1\
+		|| elf_header.e_phnum > 1024\
+		|| elf_header.e_phentsize != sizeof(struct Elf32_Phdr)) {
+		ret = -1;	
+		goto done;
+	}
 	
 } 
