@@ -13,7 +13,6 @@
 ------------------------------------------------------------------
 */
 
-#define PG_SIZE (1 << 12)
 
 /* bitmap address : 0xc009a000 
    for PCB at 0xc009e00, we can allocate 0x4000 bytes for bitmap */

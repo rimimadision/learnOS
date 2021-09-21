@@ -9,6 +9,8 @@
 #include "string.h"
 #include "list.h"
 
+#define PG_SIZE (1 << 12)
+
 #define PG_P_1 1
 #define PG_P_0 0
 #define PG_RW_R 0
