@@ -16,7 +16,8 @@ ASFLAGS = -f elf
 CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o      $(BUILD_DIR)/shell.o\
-       $(BUILD_DIR)/buildin_cmd.o  $(BUILD_DIR)/stdio.o     $(BUILD_DIR)/fork.o\
+       $(BUILD_DIR)/buildin_cmd.o  $(BUILD_DIR)/stdio.o     $(BUILD_DIR)/exec.o\
+       $(BUILD_DIR)/fork.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o   $(BUILD_DIR)/fs.o\
 	   $(BUILD_DIR)/file.o         $(BUILD_DIR)/inode.o     $(BUILD_DIR)/dir.o\
        $(BUILD_DIR)/stdio-kernel.o $(BUILD_DIR)/ide.o\
@@ -47,6 +48,11 @@ $(BUILD_DIR)/buildin_cmd.o : shell/buildin_cmd.c shell/buildin_cmd.h lib/stdio.h
 
 $(BUILD_DIR)/stdio.o : lib/stdio.c lib/stdio.h kernel/global.h lib/user/syscall.h lib/stdint.h\
 					   lib/string.h 
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/exec.o : userprog/exec.c userprog/exec.h fs/fs.h lib/stdint.h\
+				      lib/kernel/stdio-kernel.h kernel/memory.h userprog/process.h\
+				      kernel/global.h kernel/debug.h thread/thread.h 
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/fork.o : userprog/fork.c userprog/fork.h fs/fs.h lib/stdint.h\

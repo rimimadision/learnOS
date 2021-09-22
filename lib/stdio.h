@@ -2,7 +2,10 @@
 #define __LIB_STDIO_H
 
 #include "stdint.h"
-#include "global.h"
+
+#ifndef NULL
+	#define NULL 0
+#endif // NULL
 
 typedef char* va_list;
 

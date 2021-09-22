@@ -151,7 +151,6 @@ void filesys_init(void) {
 				
 				if (part->sec_cnt != 0) {
 					memset(sb_buf, 0, SECTOR_SIZE);
-					//if (part_idx > 0) {part_idx++;continue;} // I can't fix bug with load more than one partition
 					ide_read(hd, part->start_lba + 1, sb_buf, 1);
 
 					if (sb_buf->magic == 0x19700505) {

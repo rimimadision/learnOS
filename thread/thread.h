@@ -7,6 +7,7 @@
 #include "memory.h"
 
 #define MAX_FILES_OPEN_PER_PROC 8
+#define TASK_NAME_LEN 16
 
 typedef int16_t pid_t;
 typedef void thread_func(void*); // universal function type
@@ -89,7 +90,7 @@ struct task_struct
 						   // with privilege_level = 0
 	pid_t pid;
 	enum task_status status;
-	char name[16];
+	char name[TASK_NAME_LEN];
 	uint8_t priority;
 	
 	uint8_t ticks;

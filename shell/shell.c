@@ -12,7 +12,6 @@
 #include "keyboard.h"
 #include "buildin_cmd.h"
 
-
 static char cmd_line[cmd_len] = {0};
 char final_path[MAX_PATH_LEN] = {0};
 char cwd_cache[MAX_PATH_LEN] = {0};
@@ -86,9 +85,23 @@ void my_shell(void) {
 		} else if (!strcmp("rm", argv[0])){
 			buildin_rm(argc, argv);
 		} else {
-			printf("not known command\n");	
+			int32_t pid = fork();
+			if (pid != 0) { // parent process
+				while(1);
+			} else {
+				make_clear_abs_path(argv[0], final_path);
+				argv[0] = final_path;
+				struct stat file_stat;
+				memset(&file_stat, 0, sizeof(struct stat));
+				if (stat(argv[0], &file_stat) == -1) {
+					printf("my_shell:cannot access %s: No such file or directory\n", argv[0]);
+				} else {
+					execv((const char*)argv[0], (const char**)argv);
+				}
+				while(1);
+			}
 		}
-	
+		memset(argv, 0, MAX_ARG_NR);	
 	}
 	PANIC("my_shell: should not be here");
 }
