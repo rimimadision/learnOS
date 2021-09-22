@@ -98,7 +98,7 @@ static void mem_pool_init(uint32_t all_mem)
 	put_str("\n    user_pool_phy_addr_start: 0x");
 	put_int((int)u_p_start);
 	put_str("\n");
-
+	
 	/* initialize k_v_pool */
 	k_v_pool.vaddr_bitmap.btmp_bytes_len = k_btmp_len;
 	k_v_pool.vaddr_bitmap.btmp_addr = (uint8_t*)(MEM_BITMAP_BASE + k_btmp_len + u_btmp_len);

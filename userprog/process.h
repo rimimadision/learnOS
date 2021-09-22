@@ -3,7 +3,8 @@
 
 #include "thread.h"
 
-#define USER_VADDR_START 0x8048000
+#define USER_VADDR_START 0x8048000// The position of User Heap is temporarily
+								  // I will change it 
 
 void start_process(void* filename_);
 void page_dir_activate(struct task_struct* p_thread);

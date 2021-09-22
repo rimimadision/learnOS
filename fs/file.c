@@ -413,6 +413,11 @@ int32_t file_read(struct file* file, void* buf, uint32_t count) {
 			return -1;
 		}		
 	}
+	enum intr_status intr_old_status = intr_disable();	
+	struct task_struct* cur = get_cur_thread_pcb(); 
+	uint32_t* cur_pgdir = cur->pgdir;
+	cur->pgdir= NULL;
+	struct inode* new_file_inode = (struct inode*)sys_malloc(sizeof(struct inode));
 
 	uint8_t* io_buf = sys_malloc(BLOCK_SIZE);
 	if (io_buf == NULL) {
@@ -424,6 +429,9 @@ int32_t file_read(struct file* file, void* buf, uint32_t count) {
 		sys_free(io_buf);
 		return -1;
 	}
+	
+	cur->pgdir = cur_pgdir;
+	intr_set_status(intr_old_status);
 	
 	uint32_t block_read_start_idx = file->fd_pos / BLOCK_SIZE;	
 	uint32_t block_read_end_idx = (file->fd_pos + size) / BLOCK_SIZE;
@@ -470,25 +478,30 @@ int32_t file_read(struct file* file, void* buf, uint32_t count) {
 
 	uint32_t sec_idx, sec_lba, sec_off_bytes, sec_left_bytes, chunk_size;
 	uint32_t bytes_read = 0;
-
+	printk("\n\n\n\n\n");
 	while (bytes_read < size) {
 		sec_idx = file->fd_pos / BLOCK_SIZE;
 		sec_lba = all_blocks[sec_idx];
 		sec_off_bytes = file->fd_pos % BLOCK_SIZE;		
 		sec_left_bytes = BLOCK_SIZE - sec_off_bytes;
 		chunk_size = size_left < sec_left_bytes ? size_left : sec_left_bytes;
-
 		memset(io_buf, 0, BLOCK_SIZE);
 		ide_read(cur_part->my_disk, sec_lba, io_buf, 1);
 		memcpy(buf_dst, io_buf + sec_off_bytes, chunk_size);
-
 		buf_dst += chunk_size;
 		file->fd_pos += chunk_size;
 		bytes_read += chunk_size;
 		size_left -= chunk_size;
 	}
-
+	intr_old_status = intr_disable();	
+	cur = get_cur_thread_pcb(); 
+	cur_pgdir = cur->pgdir;
+	cur->pgdir= NULL;
+	printk("\n%x\n", (uint32_t)io_buf);	
 	sys_free(all_blocks);
 	sys_free(io_buf);
+	cur->pgdir = cur_pgdir;
+	intr_set_status(intr_old_status);
+	
 	return bytes_read;
 }
