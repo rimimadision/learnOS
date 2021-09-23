@@ -2,8 +2,8 @@
 #define __LIB_USER_SYSCALL_H
 
 #include "stdint.h"
-#include "fork.h"
 #include "dir.h"
+#include "fork.h"
 
 enum SYSCALL_NR {
 	SYS_GETPID,

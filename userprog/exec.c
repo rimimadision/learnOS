@@ -61,13 +61,11 @@ static bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t 
 	} else {
 		occupy_pages = 1;
 	}
-	printk("occupy_pages:%d\n", occupy_pages);
 	uint32_t page_idx = 0;
 	uint32_t vaddr_page = vaddr_first_page;
 	while (page_idx < occupy_pages) {
 		uint32_t* pde = pde_ptr((void*)vaddr_page);
 		uint32_t* pte = pte_ptr((void*)vaddr_page);
-		printk("%x %x\n", *pde, *pte);
 		if (!(*pde & 0x00000001) || !(*pte & 0x00000001)) {
 			/* need a new page */
 			if (get_a_page(PF_USER, vaddr_page) == NULL) {
@@ -76,16 +74,12 @@ static bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t 
 			}
 		}	
 	
-		printk("%x %x\n", *pde, *pte);
 		vaddr_page += PG_SIZE;
 		page_idx++;
 	}
 	sys_lseek(fd, offset, SEEK_SET);
-	/* Debug */
-	printk("\nvaddr_start:0x%x, %x\n", vaddr, filesz);
 	
 	sys_read(fd, (void*)vaddr, filesz);
-	printk("read all");
 	return true;
 }
 
@@ -155,7 +149,6 @@ int32_t sys_execv(const char* path, const char* argv[]) {
 	}
 
 	int32_t entry_point = load(path);
-	printk("%d", entry_point);
 	if (entry_point == -1) {
 		printk("Load %s failed\n", path);
 		return -1;
@@ -173,7 +166,6 @@ int32_t sys_execv(const char* path, const char* argv[]) {
 	
 	intr_0_stack->esp = (void*)0xc0000000;
 
-	printk("\n\n\n\n\n\n\n\n\n..................\n");
 	asm volatile("movl %0, %%esp; jmp intr_exit": : "g"(intr_0_stack) : "memory");
 	
 	PANIC("Won't reach here in sys_execv\n");

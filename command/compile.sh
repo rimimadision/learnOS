@@ -14,15 +14,28 @@ fi
 ### In command directory ###
 CC="/usr/local/i386elfgcc/bin/i386-elf-gcc"
 LD="/usr/local/i386elfgcc/bin/i386-elf-ld"
-BIN="prog_no_arg"
+AR="/usr/local/i386elfgcc/bin/i386-elf-ar"
+
+BIN="prog_arg"
 CFLAGS="-Wall -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes -Wsystem-headers"
-LIB="../lib/"
-OBJS="../build/string.o ../build/syscall.o ../build/stdio.o ../build/assert.o"
+LIB=" -I ../lib/ \
+	  -I ../lib/kernel/ \
+	  -I ../lib/user/ \
+	  -I ../kernel/ \
+	  -I ../device/ \
+	  -I ../thread/ \
+	  -I ../userprog/ \
+	  -I ../fs/\
+	  -I ../shell/"
+OBJS="../build/string.o ../build/syscall.o ../build/stdio.o ../build/assert.o start.o"
 DD_IN=$BIN
 DD_OUT="/usr/local/bochs/bin/60M.img"
-$CC $CFLAGS -I $LIB -o ../build/assert.o ../lib/assert.c
-$CC $CFLAGS -I $LIB -o $BIN.o $BIN.c
-$LD -e main $BIN.o $OBJS -o $BIN
+
+nasm -f elf ./start.S -o ./start.o
+$CC $CFLAGS $LIB -o ../build/assert.o ../lib/assert.c
+$AR rcs simple_crt.a $OBJS
+$CC $CFLAGS $LIB -o $BIN.o $BIN.c
+$LD $BIN.o simple_crt.a -o $BIN
 SEC_CNT=$(ls -l $BIN|awk '{printf("%d", ($5+511)/512)}')
 
 if [[ -f $BIN ]]; then

@@ -417,11 +417,10 @@ int32_t file_read(struct file* file, void* buf, uint32_t count) {
 	struct task_struct* cur = get_cur_thread_pcb(); 
 	uint32_t* cur_pgdir = cur->pgdir;
 	cur->pgdir= NULL;
-	struct inode* new_file_inode = (struct inode*)sys_malloc(sizeof(struct inode));
-
 	uint8_t* io_buf = sys_malloc(BLOCK_SIZE);
 	if (io_buf == NULL) {
 		printk("file_read:sys_malloc for io_buf failed\n");
+		return -1;
 	}
 	uint32_t* all_blocks = (uint32_t*)sys_malloc(MAX_FILE_SECTORS * 4);
 	if (all_blocks == NULL) {
@@ -478,7 +477,6 @@ int32_t file_read(struct file* file, void* buf, uint32_t count) {
 
 	uint32_t sec_idx, sec_lba, sec_off_bytes, sec_left_bytes, chunk_size;
 	uint32_t bytes_read = 0;
-	printk("\n\n\n\n\n");
 	while (bytes_read < size) {
 		sec_idx = file->fd_pos / BLOCK_SIZE;
 		sec_lba = all_blocks[sec_idx];
@@ -497,7 +495,6 @@ int32_t file_read(struct file* file, void* buf, uint32_t count) {
 	cur = get_cur_thread_pcb(); 
 	cur_pgdir = cur->pgdir;
 	cur->pgdir= NULL;
-	printk("\n%x\n", (uint32_t)io_buf);	
 	sys_free(all_blocks);
 	sys_free(io_buf);
 	cur->pgdir = cur_pgdir;
