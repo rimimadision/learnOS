@@ -532,3 +532,7 @@ void* get_a_page_without_opvaddrbitmap(enum pool_flags pf, uint32_t vaddr) {
 	
 	return (void*)vaddr;
 }
+
+void free_a_phy_page(uint32_t pg_phy_addr) {
+	pfree(pg_phy_addr);
+}

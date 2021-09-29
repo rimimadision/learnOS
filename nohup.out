@@ -1,0 +1,61 @@
+if [ ! -d ./build ]; then mkdir ./build; fi	
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes userprog/exec.c -o build/exec.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes userprog/fork.c -o build/fork.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes userprog/syscall-init.c -o build/syscall-init.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes fs/fs.c -o build/fs.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes fs/file.c -o build/file.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes fs/inode.c -o build/inode.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes fs/dir.c -o build/dir.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes userprog/process.c -o build/process.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes userprog/tss.c -o build/tss.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes thread/sync.c -o build/sync.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes thread/thread.c -o build/thread.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes device/timer.c -o build/timer.o
+/usr/local/i386elfgcc/bin/i386-elf-gcc -Wall -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ -I fs/ -I shell/ -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes kernel/memory.c -o build/memory.o
+/usr/local/i386elfgcc/bin/i386-elf-ld -Ttext 0Xc0001500 -e main -Map ./build/kernel.map build/main.o build/init.o build/shell.o build/buildin_cmd.o build/stdio.o build/exec.o build/fork.o build/syscall-init.o build/syscall.o build/fs.o build/file.o build/inode.o build/dir.o build/stdio-kernel.o build/ide.o build/keyboard.o build/ioqueue.o build/process.o build/console.o build/tss.o build/sync.o build/thread.o build/list.o build/timer.o build/interrupt.o build/kernel.o build/print.o build/memory.o build/bitmap.o build/string.o build/debug.o build/switch.o -o build/kernel.bin \
+&& objcopy --remove-section .eh_frame build/kernel.bin
+sudo dd if=./build/kernel.bin of=/usr/local/bochs/bin/60M.img bs=512 count=200 seek=9 conv=notrunc
+147+1 records in
+147+1 records out
+75620 bytes (76 kB, 74 KiB) copied, 0.00961724 s, 7.9 MB/s
+1+0 records in
+1+0 records out
+512 bytes copied, 0.00118923 s, 431 kB/s
+2+1 records in
+2+1 records out
+1430 bytes (1.4 kB, 1.4 KiB) copied, 0.00105268 s, 1.4 MB/s
+00000000000i[      ] LTDL_LIBRARY_PATH not set. using compile time default '/usr/lib/bochs/plugins'
+00000000000i[      ] BXSHARE not set. using compile time default '/usr/share/bochs'
+00000000000i[      ] lt_dlhandle is 0x55d7ac11eb20
+00000000000i[PLUGIN] loaded plugin libbx_unmapped.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac120140
+00000000000i[PLUGIN] loaded plugin libbx_biosdev.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac121940
+00000000000i[PLUGIN] loaded plugin libbx_speaker.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac1236c0
+00000000000i[PLUGIN] loaded plugin libbx_extfpuirq.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac123e90
+00000000000i[PLUGIN] loaded plugin libbx_parallel.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac125af0
+00000000000i[PLUGIN] loaded plugin libbx_serial.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac129ef0
+00000000000i[PLUGIN] loaded plugin libbx_gameport.so
+00000000000i[      ] lt_dlhandle is 0x55d7ac12a720
+00000000000i[PLUGIN] loaded plugin libbx_iodebug.so
+00000000000i[      ] reading configuration from bochsrc.disk
+00000000000e[      ] bochsrc.disk:10: ataX-master/slave CHS set to 0/0/0 - autodetection enabled
+00000000000e[      ] bochsrc.disk:11: ataX-master/slave CHS set to 0/0/0 - autodetection enabled
+00000000000i[      ] lt_dlhandle is 0x55d7ac12b150
+00000000000i[PLUGIN] loaded plugin libbx_x.so
+00000000000i[      ] installing x module as the Bochs GUI
+00000000000i[      ] using log file bochs.out
+========================================================================
+                       Bochs x86 Emulator 2.6.11
+              Built from SVN snapshot on January 5, 2020
+                Timestamp: Sun Jan  5 08:36:00 CET 2020
+========================================================================
+Next at t=0
+(0) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
+<bochs:1> fgets() returned ERROR.
+debugger interrupt request was 0
+(0).[0] [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0

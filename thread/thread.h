@@ -122,5 +122,7 @@ void thread_create(struct task_struct* pthread, thread_func* function, void* fun
 void thread_yield(void);
 pid_t fork_pid(void);
 void sys_ps(void);
+struct task_struct* pid2thread(pid_t pid);
+void thread_exit(struct task_struct* thread_over, bool need_schedule);
 
 #endif // __THREAD_THREAD_H

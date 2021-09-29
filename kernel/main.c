@@ -22,7 +22,7 @@ int main(void){
 	init_all();
 	intr_enable();
 	/* Create progress file */
-	uint32_t file_size = 6485; 
+/*	uint32_t file_size = 6485; 
 	uint32_t sec_cnt = DIV_ROUND_UP(file_size, 512);	
 	struct disk* sda = &channels[0].devices[0];
 	void* prog_buf = sys_malloc(file_size);
@@ -38,7 +38,7 @@ int main(void){
 	sys_close(fd);
 	sys_free(prog_buf);
 	
-//	cls_screen();
+*/	cls_screen();
 	init_done = true;
 	while(1);
 	return 0;
