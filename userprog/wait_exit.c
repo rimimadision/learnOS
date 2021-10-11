@@ -1,8 +1,10 @@
 #include "wait_exit.h"
+#include "bitmap.h"
 #include "thread.h"
 #include "stdint.h"
 #include "global.h"
 #include "memory.h"
+#include "fs.h"
 
 static void release_prog_resource(struct task_struct* release_thread) {
 	uint32_t* pgdir_vaddr = release_thread->pgdir;
@@ -21,7 +23,7 @@ static void release_prog_resource(struct task_struct* release_thread) {
 		v_pde_ptr = pgdir_vaddr + pde_idx;
 		pde = *v_pde_ptr;
 		if (pde & 0x00000001) {
-			first_pte_vaddr_in_pde = pte_ptr(pde_idx * 0x400000);
+			first_pte_vaddr_in_pde = pte_ptr((void*)(pde_idx * 0x400000));
 			pte_idx = 0;
 			while (pte_idx < user_pte_nr) {
 				v_pte_ptr = first_pte_vaddr_in_pde + pte_idx;
@@ -38,8 +40,8 @@ static void release_prog_resource(struct task_struct* release_thread) {
 		}	
 		pde_idx++;
 	}
-	uint32_t bitmap_pg_cnt = (release_thread->userprog_vaddr.vaddr_bitmap.btmp_bytes_lena) / PG_SIZE;
-	uint8_t* user_vaddr_pool_bitmap = release_thread->user_vaddr.vaddr_bitmap.btmp_addr;
+	uint32_t bitmap_pg_cnt = (release_thread->userprog_vaddr.vaddr_bitmap.btmp_bytes_len) / PG_SIZE;
+	uint8_t* user_vaddr_pool_bitmap = release_thread->userprog_vaddr.vaddr_bitmap.btmp_addr;
 	mfree_page(PF_KERNEL, user_vaddr_pool_bitmap, bitmap_pg_cnt);	
 
 	uint8_t fd_idx = 3;
@@ -82,7 +84,7 @@ pid_t sys_wait(int32_t* status) {
 	while(1) {
 		struct list_elem* child_elem = list_traversal(&thread_all_list, find_hanging_child, parent_thread->pid);
 	
-		if (child_elem !== NULL) {
+		if (child_elem != NULL) {
 			struct task_struct* child_thread = elem2entry(struct task_struct, all_list_tag, child_elem);
 			*status = child_thread->exit_status;
 			

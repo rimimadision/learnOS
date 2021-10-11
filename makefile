@@ -17,7 +17,7 @@ CFLAGS = -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototype
 LDFLAGS = -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS = $(BUILD_DIR)/main.o         $(BUILD_DIR)/init.o      $(BUILD_DIR)/shell.o\
        $(BUILD_DIR)/buildin_cmd.o  $(BUILD_DIR)/stdio.o     $(BUILD_DIR)/exec.o\
-       $(BUILD_DIR)/fork.o\
+       $(BUILD_DIR)/fork.o         $(BUILD_DIR)/wait_exit.o\
 	   $(BUILD_DIR)/syscall-init.o $(BUILD_DIR)/syscall.o   $(BUILD_DIR)/fs.o\
 	   $(BUILD_DIR)/file.o         $(BUILD_DIR)/inode.o     $(BUILD_DIR)/dir.o\
        $(BUILD_DIR)/stdio-kernel.o $(BUILD_DIR)/ide.o\
@@ -58,6 +58,11 @@ $(BUILD_DIR)/exec.o : userprog/exec.c userprog/exec.h fs/fs.h lib/stdint.h\
 $(BUILD_DIR)/fork.o : userprog/fork.c userprog/fork.h fs/fs.h lib/stdint.h\
 				      lib/kernel/stdio-kernel.h kernel/memory.h userprog/process.h\
 				      lib/kernel/bitmap.h kernel/debug.h thread/thread.h 
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/wait_exit.o : userprog/wait_exit.c userprog/wait_exit.h lib/stdint.h\
+				      lib/kernel/stdio-kernel.h kernel/memory.h userprog/process.h\
+				      lib/kernel/bitmap.h thread/thread.h kernel/global.h fs/fs.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/syscall.o : lib/user/syscall.c lib/user/syscall.h

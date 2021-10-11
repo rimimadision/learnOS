@@ -10,6 +10,7 @@
 #include "fork.h"
 #include "console.h"
 #include "exec.h"
+#include "wait_exit.h"
 
 #define syscall_nr 32
 	
